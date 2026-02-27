@@ -1,0 +1,227 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  workspaces: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    plan: v.union(v.literal("free"), v.literal("pro"), v.literal("enterprise")),
+    billingEmail: v.optional(v.string()),
+    maxProjects: v.number(),
+    maxPagesPerProject: v.number(),
+    subscriptionId: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  members: defineTable({
+    workspaceId: v.id("workspaces"),
+    userId: v.string(), // Better Auth user ID (string)
+    role: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
+    invitedBy: v.optional(v.string()), // Better Auth user ID (string)
+    joinedAt: v.number(),
+  })
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_userId", ["userId"])
+    .index("by_workspace_user", ["workspaceId", "userId"]),
+
+  // Note: users table is provided by @convex-dev/better-auth component
+  // We reference it via members.userId which links to the Better Auth users table
+
+  projects: defineTable({
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
+    domain: v.string(),
+    domainVerified: v.boolean(),
+    verificationMethod: v.optional(v.union(v.literal("dns_txt"), v.literal("html_meta"))),
+    verificationToken: v.string(),
+    verificationCheckedAt: v.optional(v.number()),
+    botConfig: v.object({
+      name: v.string(),
+      welcomeMessage: v.string(),
+      primaryColor: v.string(),
+      position: v.union(v.literal("bottom-left"), v.literal("bottom-right")),
+      modelProvider: v.optional(v.union(v.literal("openrouter"), v.literal("custom"))),
+      modelId: v.optional(v.string()),
+    }),
+    crawlStatus: v.optional(v.union(
+      v.literal("idle"),
+      v.literal("crawling"),
+      v.literal("completed"),
+      v.literal("failed")
+    )),
+    lastCrawledAt: v.optional(v.number()),
+    pageCount: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_domain", ["domain"]),
+
+  providerKeys: defineTable({
+    workspaceId: v.id("workspaces"),
+    provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("anthropic"), v.literal("custom")),
+    encryptedKey: v.string(),
+    baseURL: v.optional(v.string()),
+    keyFingerprint: v.string(), // Last 4 chars for display
+    addedBy: v.string(), // Better Auth user ID (string)
+    createdAt: v.number(),
+    lastValidatedAt: v.optional(v.number()),
+  })
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_workspace_provider", ["workspaceId", "provider"]),
+
+  botApiKeys: defineTable({
+    projectId: v.id("projects"),
+    workspaceId: v.id("workspaces"),
+    keyHash: v.string(),
+    keyPrefix: v.string(),
+    name: v.string(),
+    allowedOrigins: v.array(v.string()),
+    rateLimitPerMinute: v.number(),
+    rateLimitPerDay: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_keyHash", ["keyHash"])
+    .index("by_projectId", ["projectId"])
+    .index("by_workspaceId", ["workspaceId"]),
+
+  crawlJobs: defineTable({
+    projectId: v.id("projects"),
+    workspaceId: v.id("workspaces"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    totalUrls: v.number(),
+    processedUrls: v.number(),
+    failedUrls: v.number(),
+    depth: v.optional(v.union(v.literal("single"), v.literal("nested"), v.literal("full"))),
+    error: v.optional(v.string()),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_status", ["status"]),
+
+  crawledPages: defineTable({
+    projectId: v.id("projects"),
+    crawlJobId: v.id("crawlJobs"),
+    url: v.string(),
+    title: v.optional(v.string()),
+    content: v.string(),
+    contentHash: v.string(),
+    httpStatus: v.optional(v.number()),
+    contentLength: v.optional(v.number()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("crawled"),
+      v.literal("chunked"),
+      v.literal("embedded"),
+      v.literal("failed")
+    ),
+    errorMessage: v.optional(v.string()),
+    lastCrawledAt: v.optional(v.number()),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_crawlJobId", ["crawlJobId"])
+    .index("by_project_url", ["projectId", "url"])
+    .index("by_crawlJob_status", ["crawlJobId", "status"]),
+
+  chunks: defineTable({
+    projectId: v.id("projects"),
+    pageId: v.id("crawledPages"),
+    url: v.string(),
+    pageTitle: v.optional(v.string()),
+    content: v.string(),
+    chunkIndex: v.number(),
+    tokenCount: v.number(),
+    embedding: v.array(v.float64()),
+    metadata: v.object({
+      headings: v.optional(v.array(v.string())),
+      section: v.optional(v.string()),
+    }),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_pageId", ["pageId"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["projectId"],
+    }),
+
+  conversations: defineTable({
+    projectId: v.id("projects"),
+    sessionId: v.string(),
+    visitorFingerprint: v.optional(v.string()),
+    pageUrl: v.optional(v.string()),
+    referrer: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    messageCount: v.number(),
+    createdAt: v.number(),
+    lastMessageAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_sessionId", ["sessionId"])
+    .index("by_project_created", ["projectId", "createdAt"]),
+
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    projectId: v.id("projects"),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    content: v.string(),
+    sources: v.optional(v.array(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      snippet: v.string(),
+    }))),
+    tokenUsage: v.optional(v.object({
+      prompt: v.number(),
+      completion: v.number(),
+    })),
+    latencyMs: v.optional(v.number()),
+    model: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_conversationId", ["conversationId"])
+    .index("by_project_created", ["projectId", "createdAt"]),
+
+  feedback: defineTable({
+    messageId: v.id("messages"),
+    conversationId: v.id("conversations"),
+    projectId: v.id("projects"),
+    rating: v.union(v.literal("up"), v.literal("down")),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_messageId", ["messageId"])
+    .index("by_conversationId", ["conversationId"])
+    .index("by_projectId", ["projectId"]),
+
+  rateLimits: defineTable({
+    key: v.string(), // "bot:{keyPrefix}:{ip}" or similar
+    count: v.number(),
+    windowStart: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_expires", ["expiresAt"]),
+
+  // Background tasks queue for scheduled operations
+  tasks: defineTable({
+    projectId: v.id("projects"),
+    workspaceId: v.id("workspaces"),
+    type: v.union(v.literal("recrawl"), v.literal("cleanup")),
+    status: v.union(v.literal("pending"), v.literal("running"), v.literal("completed"), v.literal("failed")),
+    scheduledAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_status_scheduled", ["status", "scheduledAt"]),
+});
