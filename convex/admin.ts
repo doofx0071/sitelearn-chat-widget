@@ -1,0 +1,239 @@
+import { v } from "convex/values";
+import { query, mutation, QueryCtx } from "./_generated/server";
+import { authComponent } from "./auth";
+
+import { components } from "./_generated/api";
+
+export const debugAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx);
+    const roles = await ctx.db.query("userRoles").collect();
+    return { user, roles };
+  },
+});
+
+/**
+ * Helper to check if the current user is a Super Admin.
+ * Checks for @sitelearn.ai email, admin@example.com, or a role in userRoles.
+ */
+async function checkSuperAdmin(ctx: QueryCtx) {
+  const user = await authComponent.getAuthUser(ctx);
+  if (!user) {
+    throw new Error("Unauthorized: Not logged in");
+  }
+
+  const email = user.email;
+  const isAdminEmail = email.endsWith("@sitelearn.ai") || email === "admin@example.com";
+  
+  if (isAdminEmail) return user;
+
+  // Check userRoles table
+  const userRole = await ctx.db
+    .query("userRoles")
+    .withIndex("by_userId", (q) => q.eq("userId", user._id))
+    .first();
+
+  if (userRole?.role !== "admin") {
+    throw new Error("Unauthorized: Super Admin access required");
+  }
+
+  return user;
+}
+
+/**
+ * Updates a user's global role.
+ */
+export const updateUserRole = mutation({
+  args: {
+    userId: v.string(),
+    role: v.union(v.literal("admin"), v.literal("user")),
+  },
+  handler: async (ctx, args) => {
+    await checkSuperAdmin(ctx);
+    
+    const existingRole = await ctx.db
+      .query("userRoles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+      
+    if (existingRole) {
+      await ctx.db.patch(existingRole._id, { role: args.role });
+    } else {
+      await ctx.db.insert("userRoles", {
+        userId: args.userId,
+        role: args.role,
+      });
+    }
+  },
+});
+
+/**
+ * Returns total users, total workspaces, total projects, total messages.
+ */
+export const getGlobalStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await checkSuperAdmin(ctx);
+
+    const members = await ctx.db.query("members").collect();
+    const workspaces = await ctx.db.query("workspaces").collect();
+    const projects = await ctx.db.query("projects").collect();
+    const messages = await ctx.db.query("messages").collect();
+    const chunks = await ctx.db.query("chunks").collect();
+    const crawledPages = await ctx.db.query("crawledPages").collect();
+    const conversations = await ctx.db.query("conversations").collect();
+
+    const planDistribution = workspaces.reduce(
+      (acc, workspace) => {
+        acc[workspace.plan] += 1;
+        return acc;
+      },
+      { free: 0, pro: 0, enterprise: 0 }
+    );
+
+    return {
+      totalUsers: members.length, // Using members as a proxy for users if users table is not directly accessible
+      totalWorkspaces: workspaces.length,
+      totalProjects: projects.length,
+      totalMessages: messages.length,
+      totalChunks: chunks.length,
+      totalCrawledPages: crawledPages.length,
+      totalConversations: conversations.length,
+      planDistribution,
+    };
+  },
+});
+
+/**
+ * Returns all users (from Better Auth) and their global roles.
+ */
+export const listUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await checkSuperAdmin(ctx);
+    
+    // Query the Better Auth users table
+    const usersResult = await ctx.runQuery(components.betterAuth.adapter.findMany, {
+      model: "user",
+      paginationOpts: { numItems: 100, cursor: null },
+    });
+    
+    // Query our local userRoles table
+    const roles = await ctx.db.query("userRoles").collect();
+    const roleMap = new Map(roles.map(r => [r.userId, r.role]));
+    
+    return usersResult.page.map((u: any) => ({
+      ...u,
+      role: roleMap.get(u._id) || "user",
+    }));
+  },
+});
+
+/**
+ * Returns all workspaces with their plan and project count.
+ */
+export const listWorkspaces = query({
+  args: {},
+  handler: async (ctx) => {
+    await checkSuperAdmin(ctx);
+    const workspaces = await ctx.db.query("workspaces").order("desc").collect();
+    
+    const workspacesWithStats = await Promise.all(
+      workspaces.map(async (workspace) => {
+        const projects = await ctx.db
+          .query("projects")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspace._id))
+          .collect();
+        
+        return {
+          ...workspace,
+          projectCount: projects.length,
+        };
+      })
+    );
+
+    return workspacesWithStats;
+  },
+});
+
+/**
+ * Returns crawl jobs that are 'running' or 'pending'.
+ */
+export const listActiveJobs = query({
+  args: {},
+  handler: async (ctx) => {
+    await checkSuperAdmin(ctx);
+
+    const pendingJobs = await ctx.db
+      .query("crawlJobs")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+
+    const runningJobs = await ctx.db
+      .query("crawlJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    return [...pendingJobs, ...runningJobs].sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
+/**
+ * Returns the global AI configuration.
+ * Super-admin only. Masks the API key.
+ */
+export const getAIConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    await checkSuperAdmin(ctx);
+    const config = await ctx.db.query("aiConfig").first();
+    if (!config) return null;
+
+    // Mask the key: show only last 4 chars
+    const maskedKey = config.apiKeyEncrypted.length > 8
+      ? `****${config.apiKeyEncrypted.slice(-4)}`
+      : "****";
+
+    return {
+      ...config,
+      apiKeyEncrypted: maskedKey,
+    };
+  },
+});
+
+/**
+ * Sets or updates the global AI configuration.
+ * Super-admin only.
+ */
+export const setAIConfig = mutation({
+  args: {
+    provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("custom")),
+    model: v.string(),
+    baseURL: v.optional(v.string()),
+    apiKey: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await checkSuperAdmin(ctx);
+    const existing = await ctx.db.query("aiConfig").first();
+
+    if (!args.apiKey && !existing) {
+      throw new Error("API key is required for initial AI configuration");
+    }
+
+    const configData = {
+      provider: args.provider,
+      model: args.model,
+      baseURL: args.baseURL,
+      apiKeyEncrypted: args.apiKey ?? existing?.apiKeyEncrypted ?? "",
+      updatedAt: Date.now(),
+      updatedBy: user._id,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, configData);
+    } else {
+      await ctx.db.insert("aiConfig", configData);
+    }
+  },
+});

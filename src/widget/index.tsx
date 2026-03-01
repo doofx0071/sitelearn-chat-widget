@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────
 //  SiteLearn Chat Widget — Auto-mount Entry
 //  Reads config from <script> data-* attributes
-//  and mounts the React widget into a shadow DOM
+//  and mounts the React widget into a Shadow DOM
 //  for full CSS isolation from the host page.
 // ─────────────────────────────────────────────
 
@@ -10,7 +10,8 @@ import { createRoot } from 'react-dom/client';
 import Widget from './widget';
 import type { WidgetConfig, WidgetPosition } from './types';
 
-// Import styles as a raw string so we can inject them into shadow DOM
+// Import styles as a raw string so we can inject them into the shadow DOM.
+// The ?inline query is handled by Vite — no separate .css file is emitted.
 import rawStyles from './styles.css?inline';
 
 // ─── Config extraction ────────────────────────
@@ -19,6 +20,10 @@ function getDataAttr(el: HTMLElement, key: string, fallback = ''): string {
   return el.dataset[key] ?? fallback;
 }
 
+/**
+ * Reads WidgetConfig from a script element's data-* attributes.
+ * Supports both camelCase (data-botId) and kebab-case (data-bot-id) forms.
+ */
 function readConfig(script: HTMLElement): WidgetConfig {
   const positionRaw = getDataAttr(script, 'position', 'right');
   const position: WidgetPosition = positionRaw === 'left'
@@ -31,13 +36,13 @@ function readConfig(script: HTMLElement): WidgetConfig {
   }
 
   return {
-    botId:          getDataAttr(script, 'botId', getDataAttr(script, 'bot-id', 'default')),
-    primaryColor:   getDataAttr(script, 'primaryColor', getDataAttr(script, 'primary-color', '#5B6AF0')),
-    apiEndpoint:    getDataAttr(script, 'apiEndpoint', getDataAttr(script, 'api-endpoint', 'https://api.sitelearn.io')),
+    botId:          getDataAttr(script, 'botId',          getDataAttr(script, 'bot-id',          'default')),
+    primaryColor:   getDataAttr(script, 'primaryColor',   getDataAttr(script, 'primary-color',   '#5B6AF0')),
+    apiEndpoint:    getDataAttr(script, 'apiEndpoint',    getDataAttr(script, 'api-endpoint',    'https://api.sitelearn.io')),
     welcomeMessage: getDataAttr(script, 'welcomeMessage', getDataAttr(script, 'welcome-message', 'Hi there! How can I help you today?')),
-    botName:        getDataAttr(script, 'botName', getDataAttr(script, 'bot-name', 'SiteLearn AI')),
-    botAvatar:      getDataAttr(script, 'botAvatar', getDataAttr(script, 'bot-avatar', '')),
-    autoOpen:       getDataAttr(script, 'autoOpen', getDataAttr(script, 'auto-open', 'false')) === 'true',
+    botName:        getDataAttr(script, 'botName',        getDataAttr(script, 'bot-name',        'SiteLearn AI')),
+    botAvatar:      getDataAttr(script, 'botAvatar',      getDataAttr(script, 'bot-avatar',      '')),
+    autoOpen:       getDataAttr(script, 'autoOpen',       getDataAttr(script, 'auto-open',       'false')) === 'true',
     zIndex:         parseInt(getDataAttr(script, 'zIndex', getDataAttr(script, 'z-index', '9999')), 10),
     position,
   };
@@ -49,26 +54,50 @@ function mountWidget(config: WidgetConfig): void {
   // Prevent duplicate mounts
   if (document.querySelector('#sl-widget-host')) return;
 
-  // Create host element appended to body
+  // ── 1. Create host element ──
+  // position:fixed + z-index comes from the child .sl-trigger / .sl-window
+  // classes (which use fixed positioning themselves). The host wrapper is just
+  // a zero-size anchor so it doesn't interfere with the host page layout.
   const host = document.createElement('div');
   host.id = 'sl-widget-host';
-  host.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:0;pointer-events:none;';
+  // Keep the host out of the flow and out of the painting layer.
+  // The trigger/window are positioned fixed so they escape this container.
+  host.style.cssText = [
+    'position:fixed',
+    'top:0',
+    'left:0',
+    'width:0',
+    'height:0',
+    'overflow:visible',   // allow fixed children to paint outside
+    'pointer-events:none',
+    // NOTE: do NOT use contain:layout/strict/paint here — those would create a
+    // new containing block for position:fixed children inside the shadow root,
+    // breaking the fixed-position trigger bubble and chat window.
+  ].join(';');
   document.body.appendChild(host);
 
-  // Attach shadow DOM for CSS isolation
-  const shadow = host.attachShadow({ mode: 'open' });
+  // ── 2. Attach Shadow DOM ──
+  // delegatesFocus: true — when the shadow host gains focus it forwards to
+  // the first focusable element inside the shadow root (good for a11y).
+  const shadow = host.attachShadow({ mode: 'open', delegatesFocus: true });
 
-  // Inject scoped styles into shadow root
+  // ── 3. Inject compiled CSS into shadow root ──
+  // We use a <style> element for universal browser support.
+  // On browsers that support adoptedStyleSheets we could use a CSSStyleSheet,
+  // but the <style> approach is spec-compliant and works everywhere.
   const styleEl = document.createElement('style');
   styleEl.textContent = rawStyles;
   shadow.appendChild(styleEl);
 
-  // Mount point inside shadow DOM
+  // ── 4. Create React mount point ──
   const mountPoint = document.createElement('div');
   mountPoint.id = 'sl-widget-root';
+  // The mount point is a zero-size element; the trigger and window are
+  // position:fixed and will paint relative to the viewport. We don't set
+  // pointer-events:none here because the widget's trigger needs clicks.
   shadow.appendChild(mountPoint);
 
-  // Render React tree
+  // ── 5. Render the React widget tree ──
   const root = createRoot(mountPoint);
   root.render(
     <React.StrictMode>
@@ -80,13 +109,14 @@ function mountWidget(config: WidgetConfig): void {
 // ─── Auto-detect and mount ────────────────────
 
 function autoMount(): void {
-  // Find the SiteLearn script tag
+  // Prefer document.currentScript (synchronous embed) then fall back to a
+  // query selector (async / deferred embed).
   const script =
     (document.currentScript as HTMLElement | null) ??
     document.querySelector<HTMLElement>('script[data-bot-id],script[data-botId]');
 
   if (!script) {
-    console.warn('[SiteLearn] Could not find widget script tag with data attributes.');
+    console.warn('[SiteLearn] Could not find a widget script tag with data-bot-id or data-botId attributes.');
     return;
   }
 
@@ -94,19 +124,20 @@ function autoMount(): void {
   mountWidget(config);
 }
 
-// Run immediately if DOM is ready, else wait
+// Run immediately if DOM is ready, else defer until DOMContentLoaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', autoMount, { once: true });
 } else {
   autoMount();
 }
 
-// ─── Programmatic API (export for bundled usage) ──
+// ─── Programmatic API ─────────────────────────
+// Exposed both as ES module exports and as window.SiteLearnWidget
+// so vanilla-JS embeds can call: SiteLearnWidget.mount({ botId: '...' })
 
 export { mountWidget, readConfig };
 export type { WidgetConfig };
 
-// Expose on window for vanilla-JS embed usage
 declare global {
   interface Window {
     SiteLearnWidget: {
@@ -118,3 +149,4 @@ declare global {
 if (typeof window !== 'undefined') {
   window.SiteLearnWidget = { mount: mountWidget };
 }
+

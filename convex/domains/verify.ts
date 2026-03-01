@@ -1,56 +1,47 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, mutation } from "../_generated/server";
+import { mutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 
-export const initiateVerification = mutation({
+export const createProject = mutation({
   args: {
-    projectId: v.id("projects"),
-    type: v.union(v.literal("dns"), v.literal("html")),
-  },
-  handler: async (ctx, args) => {
-    const token = `sitelearn-verify-${Math.random().toString(36).substring(2)}`;
-    // In a real app, you'd store this in a 'domainVerifications' table
-    // For now, we'll just return it
-    return { token };
-  },
-});
-
-export const checkVerification = internalAction({
-  args: {
-    projectId: v.id("projects"),
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
     domain: v.string(),
-    token: v.string(),
-    type: v.union(v.literal("dns"), v.literal("html")),
   },
   handler: async (ctx, args) => {
-    if (args.type === "dns") {
-      try {
-        // Mock DNS check
-        // const records = await resolveTxt(`_sitelearn.${args.domain}`);
-        // return records.includes(args.token);
-        return true; 
-      } catch (e) {
-        return false;
-      }
-    } else {
-      try {
-        const response = await fetch(`https://${args.domain}`);
-        const html = await response.text();
-        return html.includes(args.token);
-      } catch (e) {
-        return false;
-      }
-    }
-  },
-});
+    const projectId = await ctx.db.insert("projects", {
+      workspaceId: args.workspaceId,
+      name: args.name,
+      domain: args.domain,
+      botConfig: {
+        name: args.name,
+        welcomeMessage: `Hi! I'm the ${args.name} assistant. How can I help you today?`,
+        primaryColor: "#3b82f6",
+        position: "bottom-right",
+      },
+      learningConfig: {
+        depth: "full",
+        schedule: "weekly",
+        excludedPaths: [],
+      },
+      crawlStatus: "idle",
+      pageCount: 0,
+      createdAt: Date.now(),
+    });
 
-export const updateVerification = internalMutation({
-  args: {
-    projectId: v.id("projects"),
-    verified: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    // Update project status
-    // await ctx.db.patch(args.projectId, { verified: args.verified });
+    const aiConfig = await ctx.db.query("aiConfig").first();
+    if (aiConfig) {
+      await ctx.scheduler.runAfter(0, internal.crawl.start.startCrawlInternal, {
+        projectId,
+        url: `https://${args.domain}`,
+        depth: "full",
+      });
+    }
+
+    await ctx.scheduler.runAfter(0, internal.crawl.scheduler.refreshScheduledRecrawl, {
+      projectId,
+    });
+
+    return projectId;
   },
 });

@@ -16,16 +16,20 @@ export const saveChunks = internalMutation({
       v.object({
         content: v.string(),
         embedding: v.array(v.float64()),
-        metadata: v.any(),
+        metadata: v.object({
+          headings: v.optional(v.array(v.string())),
+          section: v.optional(v.string()),
+        }),
       })
     ),
   },
   handler: async (ctx, args) => {
+    const page = await ctx.db.get(args.pageId);
+
     // Delete old chunks for this page if any (re-crawl)
     const existingChunks = await ctx.db
       .query("chunks")
-      .withIndex("by_projectId", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("pageId"), args.pageId))
+      .withIndex("by_pageId", (q) => q.eq("pageId", args.pageId))
       .collect();
 
     for (const chunk of existingChunks) {
@@ -38,12 +42,44 @@ export const saveChunks = internalMutation({
       await ctx.db.insert("chunks", {
         projectId: args.projectId,
         pageId: args.pageId,
-        url: "", // Should be passed from action
+        url: page?.url ?? "",
+        pageTitle: page?.title,
         content: chunk.content,
         chunkIndex: i,
-        tokenCount: 0, // Should be calculated
+        tokenCount: chunk.content.split(/\s+/).filter(Boolean).length,
         embedding: chunk.embedding,
-        metadata: chunk.metadata,
+        metadata: {
+          section: chunk.metadata.section,
+          headings: chunk.metadata.headings,
+        },
+      });
+    }
+
+    await ctx.db.patch(args.pageId, {
+      status: "embedded",
+      lastCrawledAt: Date.now(),
+    });
+  },
+});
+
+export const markPageEmbedFailed = internalMutation({
+  args: {
+    pageId: v.id("crawledPages"),
+    error: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const page = await ctx.db.get(args.pageId);
+    if (!page) return;
+
+    await ctx.db.patch(args.pageId, {
+      status: "failed",
+      errorMessage: args.error,
+    });
+
+    const job = await ctx.db.get(page.crawlJobId);
+    if (job) {
+      await ctx.db.patch(job._id, {
+        failedUrls: job.failedUrls + 1,
       });
     }
   },

@@ -1,6 +1,9 @@
 "use client";
 
 import { use } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../../convex/_generated/api";
+import { Id } from "../../../../../../convex/_generated/dataModel";
 import { Header } from "@/components/dashboard/header";
 import { EmbedCode } from "@/components/dashboard/embed-code";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,26 +12,36 @@ import { Button } from "@/components/ui/button";
 import { Globe, ExternalLink, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-// Mock data — replace with Convex query
-const MOCK_PROJECT = {
-  id: "proj_1",
-  name: "Acme Docs",
-  domain: "docs.acme.com",
-};
-
 export default function ProjectEmbedPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const project = useQuery(api.projects.get, { projectId: id as Id<"projects"> });
+
+  if (project === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (project === null) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Project not found</p>
+      </div>
+    );
+  }
 
   return (
     <>
       <Header
         breadcrumbs={[
           { label: "Projects", href: "/dashboard" },
-          { label: MOCK_PROJECT.name, href: `/dashboard/projects/${id}` },
+          { label: project.name, href: `/dashboard/projects/${id}` },
           { label: "Embed" },
         ]}
       />
@@ -48,7 +61,7 @@ export default function ProjectEmbedPage({
                   Embed Widget
                 </h1>
                 <Badge variant="secondary" className="text-[10px]">
-                  {MOCK_PROJECT.domain}
+                  {project.domain}
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -83,12 +96,12 @@ export default function ProjectEmbedPage({
                   <div className="flex items-center gap-2 text-xs">
                     <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <a
-                      href={`https://${MOCK_PROJECT.domain}`}
+                      href={`https://${project.domain}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {MOCK_PROJECT.domain}
+                      {project.domain}
                       <ExternalLink className="h-2.5 w-2.5" />
                     </a>
                   </div>
@@ -131,26 +144,18 @@ export default function ProjectEmbedPage({
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Allowed domains</CardTitle>
-                  <CardDescription className="text-xs">
-                    The widget will only load on these domains.
-                  </CardDescription>
+                  <CardTitle className="text-sm">Before going live</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {[MOCK_PROJECT.domain, `www.${MOCK_PROJECT.domain}`].map((d) => (
-                    <div
-                      key={d}
-                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-                    >
-                      <span className="font-mono text-[11px] text-foreground">{d}</span>
-                      <Badge variant="outline" className="text-[10px] text-emerald-600">
-                        Verified
-                      </Badge>
-                    </div>
-                  ))}
-                  <Button variant="ghost" size="sm" className="mt-1 h-7 w-full text-xs text-muted-foreground">
-                    + Add domain
-                  </Button>
+                <CardContent className="space-y-3 text-xs text-muted-foreground">
+                  <p>
+                    Re-run learning after major content updates so answers stay current.
+                  </p>
+                  <p>
+                    Test your first prompts in Playground, then validate behavior on your real site using the embed preview and production URL.
+                  </p>
+                  <p>
+                    Keep your script URL and API endpoint consistent across environments (staging and production).
+                  </p>
                 </CardContent>
               </Card>
             </div>

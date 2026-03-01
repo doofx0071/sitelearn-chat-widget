@@ -51,19 +51,19 @@ const statusConfig = {
     label: "Running",
     icon: Loader2,
     badgeClass: "bg-blue-500/15 text-blue-700 border-blue-200 dark:text-blue-400 dark:border-blue-800",
-    description: "Crawling in progress",
+    description: "Learning in progress",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle2,
     badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-200 dark:text-emerald-400 dark:border-emerald-800",
-    description: "Crawl finished successfully",
+    description: "Learning finished successfully",
   },
   failed: {
     label: "Failed",
     icon: XCircle,
     badgeClass: "bg-red-500/15 text-red-700 border-red-200 dark:text-red-400 dark:border-red-800",
-    description: "Crawl encountered errors",
+    description: "Learning encountered errors",
   },
 };
 
@@ -183,7 +183,7 @@ export function CrawlStatusCard({
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 onClick={() => onCancel(job.id)}
-                aria-label="Cancel crawl"
+                aria-label="Cancel learning"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>

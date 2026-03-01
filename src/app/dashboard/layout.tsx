@@ -4,6 +4,8 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 
@@ -14,12 +16,19 @@ export default function DashboardLayout({
 }) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const ensureWorkspace = useMutation(api.workspaces.ensureWorkspace);
 
   useEffect(() => {
     if (!isPending && !session) {
       router.replace("/login");
     }
   }, [session, isPending, router]);
+
+  useEffect(() => {
+    if (session) {
+      ensureWorkspace();
+    }
+  }, [session, ensureWorkspace]);
 
   if (isPending) {
     return (

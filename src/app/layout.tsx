@@ -44,7 +44,7 @@ export default function RootLayout({
         <ConvexClientProvider>
           <TooltipProvider delayDuration={300}>
             {children}
-            <Toaster position="bottom-right" />
+            <Toaster position="top-right" />
           </TooltipProvider>
         </ConvexClientProvider>
       </body>

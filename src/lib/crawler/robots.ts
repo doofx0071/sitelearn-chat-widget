@@ -44,7 +44,12 @@ export class RobotsParser {
   }
 
   isAllowed(url: string, userAgent: string = '*'): boolean {
-    const path = new URL(url).pathname;
+    let path = '/';
+    try {
+      path = new URL(url).pathname;
+    } catch {
+      return false;
+    }
     const rule = this.rules.find(r => r.userAgent === userAgent) || this.rules.find(r => r.userAgent === '*');
     
     if (!rule) return true;

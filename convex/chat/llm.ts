@@ -3,22 +3,49 @@ import { internalAction, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { generateEmbedding as genEmbedding } from "../../src/lib/rag/embeddings";
 
+/**
+ * Internal query to get the global AI configuration.
+ */
+export const getGlobalAIConfig = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("aiConfig").first();
+  },
+});
+
 export const generateEmbeddingAction = internalAction({
   args: {
     text: v.string(),
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args): Promise<number[]> => {
-    const providerKey = await ctx.runQuery(internal.chat.rag.getProviderKey, { workspaceId: args.workspaceId });
-    if (!providerKey) throw new Error("No provider key found");
+    const config = await ctx.runQuery(internal.chat.llm.getGlobalAIConfig);
+    if (!config) throw new Error("Global AI configuration not found");
 
-    // In a real app, you'd decrypt the key here
-    const apiKey = providerKey.encryptedKey; 
+    const embeddingModelCandidates =
+      config.provider === "openrouter"
+        ? ["openai/text-embedding-3-small", "text-embedding-3-small"]
+        : config.provider === "openai"
+          ? ["text-embedding-3-small", "text-embedding-3-large"]
+          : [config.model, "text-embedding-3-small"].filter(Boolean) as string[];
 
-    return await genEmbedding(args.text, {
-      provider: providerKey.provider as any,
-      apiKey,
-    });
+    let lastError: unknown = null;
+    for (const model of embeddingModelCandidates) {
+      try {
+        return await genEmbedding(args.text, {
+          provider: config.provider as "openrouter" | "openai" | "custom",
+          apiKey: config.apiKeyEncrypted,
+          baseURL: config.baseURL,
+          model,
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Failed to generate embedding with available models");
   },
 });
 
@@ -28,13 +55,13 @@ export const callLLM = internalAction({
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args): Promise<string> => {
-    const providerKey = await ctx.runQuery(internal.chat.rag.getProviderKey, { workspaceId: args.workspaceId });
-    if (!providerKey) throw new Error("No provider key found");
+    const config = await ctx.runQuery(internal.chat.llm.getGlobalAIConfig);
+    if (!config) throw new Error("Global AI configuration not found");
 
-    const apiKey = providerKey.encryptedKey;
-    const baseURL = providerKey.provider === "openai" 
+    const apiKey = config.apiKeyEncrypted;
+    const baseURL = config.baseURL || (config.provider === "openai" 
       ? "https://api.openai.com/v1" 
-      : "https://openrouter.ai/api/v1";
+      : "https://openrouter.ai/api/v1");
 
     let retries = 0;
     const maxRetries = 3;
@@ -48,7 +75,7 @@ export const callLLM = internalAction({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: providerKey.provider === "openai" ? "gpt-4-turbo" : "openrouter/auto",
+            model: config.model,
             messages: args.messages,
           }),
         });

@@ -3,12 +3,25 @@
  */
 export function normalizeUrl(url: string, baseUrl: string): string {
   try {
-    const absoluteUrl = new URL(url, baseUrl);
+    const absoluteUrl = new URL(sanitizeProtocol(url), sanitizeProtocol(baseUrl));
     absoluteUrl.hash = ''; // strip fragment
     return normalizeTrailingSlash(absoluteUrl.toString());
   } catch (error) {
     return url;
   }
+}
+
+function sanitizeProtocol(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+
+  // Fix malformed protocol forms and duplicate prefixes.
+  // Examples:
+  // - https//example.com -> https://example.com
+  // - http//example.com -> http://example.com
+  // - https://https://example.com -> https://example.com
+  const withProtocol = trimmed.replace(/^(https?):?\/\//i, '$1://');
+  return withProtocol.replace(/^(https?:\/\/)+/i, 'https://');
 }
 
 /**
@@ -18,7 +31,7 @@ export function isSameDomain(url: string, domain: string): boolean {
   try {
     const urlDomain = extractDomain(url);
     const targetDomain = extractDomain(domain);
-    return urlDomain.endsWith(targetDomain) || targetDomain.endsWith(urlDomain);
+    return urlDomain === targetDomain || urlDomain.endsWith(`.${targetDomain}`);
   } catch {
     return false;
   }
@@ -29,7 +42,8 @@ export function isSameDomain(url: string, domain: string): boolean {
  */
 export function extractDomain(url: string): string {
   try {
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const cleanUrl = sanitizeProtocol(url);
+    const parsed = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
     return parsed.hostname.replace(/^www\./, '');
   } catch {
     return '';

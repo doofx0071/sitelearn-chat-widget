@@ -60,7 +60,7 @@ const statusConfig: Record<
     className: "bg-emerald-500/15 text-emerald-700 border-emerald-200 dark:text-emerald-400 dark:border-emerald-800",
   },
   crawling: {
-    label: "Crawling",
+    label: "Learning",
     variant: "secondary",
     className: "bg-blue-500/15 text-blue-700 border-blue-200 dark:text-blue-400 dark:border-blue-800",
   },
@@ -82,7 +82,7 @@ const statusConfig: Record<
 };
 
 function formatLastCrawled(dateStr: string | null): string {
-  if (!dateStr) return "Never crawled";
+  if (!dateStr) return "Never learned";
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -200,7 +200,7 @@ export function ProjectCard({
                     disabled={project.status === "crawling"}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
-                    Re-crawl
+                    Re-learn
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -239,7 +239,7 @@ export function ProjectCard({
                   <span>{formatLastCrawled(project.lastCrawled)}</span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>Last crawled</TooltipContent>
+              <TooltipContent>Last learned</TooltipContent>
             </Tooltip>
           </div>
         </CardContent>

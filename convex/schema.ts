@@ -24,6 +24,21 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_workspace_user", ["workspaceId", "userId"]),
 
+  // Global roles for super-admins (since Better Auth component schema is strict)
+  userRoles: defineTable({
+    userId: v.string(), // Better Auth user ID
+    role: v.union(v.literal("admin"), v.literal("user")),
+  }).index("by_userId", ["userId"]),
+
+  aiConfig: defineTable({
+    provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("custom")),
+    model: v.string(),
+    baseURL: v.optional(v.string()),
+    apiKeyEncrypted: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.string(), // Better Auth user ID
+  }),
+
   // Note: users table is provided by @convex-dev/better-auth component
   // We reference it via members.userId which links to the Better Auth users table
 
@@ -31,10 +46,6 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     name: v.string(),
     domain: v.string(),
-    domainVerified: v.boolean(),
-    verificationMethod: v.optional(v.union(v.literal("dns_txt"), v.literal("html_meta"))),
-    verificationToken: v.string(),
-    verificationCheckedAt: v.optional(v.number()),
     botConfig: v.object({
       name: v.string(),
       welcomeMessage: v.string(),
@@ -43,6 +54,11 @@ export default defineSchema({
       modelProvider: v.optional(v.union(v.literal("openrouter"), v.literal("custom"))),
       modelId: v.optional(v.string()),
     }),
+    learningConfig: v.optional(v.object({
+      depth: v.union(v.literal("single"), v.literal("nested"), v.literal("full")),
+      schedule: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("manual")),
+      excludedPaths: v.array(v.string()),
+    })),
     crawlStatus: v.optional(v.union(
       v.literal("idle"),
       v.literal("crawling"),
@@ -55,19 +71,6 @@ export default defineSchema({
   })
     .index("by_workspaceId", ["workspaceId"])
     .index("by_domain", ["domain"]),
-
-  providerKeys: defineTable({
-    workspaceId: v.id("workspaces"),
-    provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("anthropic"), v.literal("custom")),
-    encryptedKey: v.string(),
-    baseURL: v.optional(v.string()),
-    keyFingerprint: v.string(), // Last 4 chars for display
-    addedBy: v.string(), // Better Auth user ID (string)
-    createdAt: v.number(),
-    lastValidatedAt: v.optional(v.number()),
-  })
-    .index("by_workspaceId", ["workspaceId"])
-    .index("by_workspace_provider", ["workspaceId", "provider"]),
 
   botApiKeys: defineTable({
     projectId: v.id("projects"),
@@ -101,6 +104,7 @@ export default defineSchema({
     failedUrls: v.number(),
     depth: v.optional(v.union(v.literal("single"), v.literal("nested"), v.literal("full"))),
     error: v.optional(v.string()),
+    coverageWarning: v.optional(v.string()),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
     createdAt: v.number(),
@@ -224,4 +228,5 @@ export default defineSchema({
   })
     .index("by_projectId", ["projectId"])
     .index("by_status_scheduled", ["status", "scheduledAt"]),
+
 });

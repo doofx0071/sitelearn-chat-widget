@@ -87,6 +87,47 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * Derive dark/light/ghost variants from a hex primary color so the widget
+ * stays visually coherent when the host provides a custom `data-primary-color`.
+ *
+ * Returns a React.CSSProperties object with all four --sl-primary-* vars set.
+ */
+function derivePrimaryVars(hex: string): React.CSSProperties {
+  // Parse #rgb or #rrggbb
+  const raw = hex.replace('#', '');
+  const full = raw.length === 3
+    ? raw.split('').map((c) => c + c).join('')
+    : raw;
+
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+    // Fallback: let CSS variables from :host take over
+    return {} as React.CSSProperties;
+  }
+
+  // Darken by blending toward black (20 %)
+  const dark = (v: number) => Math.max(0, Math.round(v * 0.8));
+  // Lighten by blending toward white (15 %)
+  const light = (v: number) => Math.min(255, Math.round(v + (255 - v) * 0.15));
+
+  const rD = dark(r); const gD = dark(g); const bD = dark(b);
+  const rL = light(r); const gL = light(g); const bL = light(b);
+
+  return {
+    '--sl-primary':       `#${full}`,
+    '--sl-primary-dark':  `rgb(${rD},${gD},${bD})`,
+    '--sl-primary-light': `rgb(${rL},${gL},${bL})`,
+    '--sl-primary-ghost': `rgba(${r},${g},${b},0.10)`,
+    '--sl-user-bg':       `#${full}`,
+    '--sl-border':        `rgba(${r},${g},${b},0.15)`,
+    '--sl-surface-3':     `rgba(${r},${g},${b},0.06)`,
+  } as React.CSSProperties;
+}
+
 // ─── Sub-components ───────────────────────────
 
 interface CitationsProps {
@@ -256,15 +297,11 @@ const Widget: React.FC<WidgetProps> = ({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
-  // Apply dynamic primary color via inline CSS custom properties
-  const cssVars: React.CSSProperties = primaryColor
-    ? ({
-        '--sl-primary': primaryColor,
-        '--sl-primary-dark': primaryColor,
-        '--sl-primary-light': primaryColor,
-        zIndex,
-      } as React.CSSProperties)
-    : { zIndex };
+  // Apply dynamic primary color via CSS custom properties derived from the hex
+  const cssVars: React.CSSProperties = {
+    ...(primaryColor ? derivePrimaryVars(primaryColor) : {}),
+    zIndex,
+  };
 
   // ── Send logic ────────────────────────────
 
@@ -560,9 +597,6 @@ const Widget: React.FC<WidgetProps> = ({
           </a>
         </footer>
       </div>
-
-      {/* Visually hidden utility class */}
-      <style>{`.sl-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`}</style>
     </div>
   );
 };

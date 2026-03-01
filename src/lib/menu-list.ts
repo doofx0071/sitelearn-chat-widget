@@ -1,11 +1,8 @@
 import {
   LayoutGrid,
   Globe,
-  Bot,
   Settings,
-  CreditCard,
-  BarChart3,
-  LucideIcon
+  LucideIcon,
 } from "lucide-react";
 
 type Submenu = {
@@ -27,7 +24,7 @@ type Group = {
   menus: Menu[];
 };
 
-export function getMenuList(pathname: string): Group[] {
+export function getMenuList(_pathname: string): Group[] {
   return [
     {
       groupLabel: "",
@@ -36,37 +33,9 @@ export function getMenuList(pathname: string): Group[] {
           href: "/dashboard",
           label: "Dashboard",
           icon: LayoutGrid,
-          submenus: []
-        }
-      ]
-    },
-    {
-      groupLabel: "Projects",
-      menus: [
-        {
-          href: "/dashboard/projects",
-          label: "My Projects",
-          icon: Globe,
-          submenus: []
+          submenus: [],
         },
-        {
-          href: "/dashboard/bots",
-          label: "Chat Bots",
-          icon: Bot,
-          submenus: []
-        }
-      ]
-    },
-    {
-      groupLabel: "Analytics",
-      menus: [
-        {
-          href: "/dashboard/analytics",
-          label: "Overview",
-          icon: BarChart3,
-          submenus: []
-        }
-      ]
+      ],
     },
     {
       groupLabel: "Settings",
@@ -75,15 +44,9 @@ export function getMenuList(pathname: string): Group[] {
           href: "/dashboard/settings",
           label: "Settings",
           icon: Settings,
-          submenus: []
+          submenus: [],
         },
-        {
-          href: "/dashboard/billing",
-          label: "Billing",
-          icon: CreditCard,
-          submenus: []
-        }
-      ]
-    }
+      ],
+    },
   ];
 }

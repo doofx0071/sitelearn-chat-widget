@@ -198,14 +198,6 @@ export default function HomePage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 px-8 text-base"
-                asChild
-              >
-                <Link href="/dashboard">View demo</Link>
-              </Button>
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground">

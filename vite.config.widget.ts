@@ -10,6 +10,16 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
 
+  // ── CSS pipeline ──
+  // The widget uses plain CSS (no Tailwind), so we override the global
+  // postcss.config.mjs (which pulls in @tailwindcss/postcss) with an empty
+  // plugins object. Without this, PostCSS fails on the ?inline import.
+  css: {
+    postcss: {
+      plugins: [],
+    },
+  },
+
   build: {
     // Write widget output into dist/widget/
     outDir: 'dist/widget',
@@ -17,9 +27,9 @@ export default defineConfig({
 
     // Single IIFE bundle — no code-splitting
     lib: {
-      entry: resolve(__dirname, 'src/widget/index.ts'),
+      entry: resolve(__dirname, 'src/widget/index.tsx'),
       name: 'SiteLearnWidget',
-      // Produces: widget.js + widget.min.js (minified)
+      // Produces: widget.iife.js (minified)
       fileName: (format) => `widget.${format}.js`,
       formats: ['iife'],
     },
@@ -58,21 +68,14 @@ export default defineConfig({
     cssCodeSplit: false,
   },
 
-  // Ensure ?inline imports work
-  assetsInclude: ['**/*.css'],
-
   resolve: {
     alias: {
       '@widget': resolve(__dirname, 'src/widget'),
     },
   },
 
-  // Needed so Vite knows the ?inline query is intentional
-  optimizeDeps: {
-    exclude: [],
-  },
-
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
 });
+

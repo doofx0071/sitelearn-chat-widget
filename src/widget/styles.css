@@ -7,7 +7,8 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Lora:wght@500;600&display=swap');
 
 /* ── Custom properties ─────────────────────── */
-:root {
+/* :host targets the shadow root — :root does not work inside Shadow DOM */
+:host {
   --sl-primary:        #5B6AF0;
   --sl-primary-light:  #7B8AF8;
   --sl-primary-dark:   #3D4EC8;
@@ -33,8 +34,8 @@
   --sl-font-body:      'DM Sans', system-ui, sans-serif;
   --sl-font-display:   'Lora', Georgia, serif;
   --sl-transition:     0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  --sl-window-w:       380px;
-  --sl-window-h:       580px;
+  --sl-window-w:       420px;
+  --sl-window-h:       680px;
 }
 
 /* ── Reset ──────────────────────────────────── */
@@ -46,12 +47,11 @@
   padding: 0;
 }
 
-html,
-body {
-  height: 100%;
-  background: transparent;
+/* :host is the shadow host element — replaces html/body for base font */
+:host {
   font-family: var(--sl-font-body);
   -webkit-font-smoothing: antialiased;
+  display: block;
 }
 
 /* ═══════════════════════════════════════════ */
@@ -155,7 +155,7 @@ body {
   right: 24px;
   z-index: 9999;
   width: var(--sl-window-w);
-  height: var(--sl-window-h);
+  height: min(var(--sl-window-h), calc(100dvh - 100px));
   display: flex;
   flex-direction: column;
   background: var(--sl-surface);
@@ -292,6 +292,7 @@ body {
 
 .sl-messages {
   flex: 1;
+  min-height: 0; /* Allow shrinking in flex container */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px 16px 12px;
@@ -614,6 +615,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .sl-handoff-btn {
@@ -665,6 +667,7 @@ body {
 
 /* ── Responsive ──────────────────────────────── */
 
+/* Mobile full-screen takeover */
 @media (max-width: 440px) {
   .sl-window {
     right: 0 !important;
@@ -672,6 +675,7 @@ body {
     bottom: 0 !important;
     width: 100% !important;
     height: 100dvh !important;
+    max-height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
   }
@@ -680,4 +684,85 @@ body {
     bottom: 16px;
     right: 16px;
   }
+
+  .sl-inputbar,
+  .sl-footer {
+    flex-shrink: 0 !important;
+  }
+
+  .sl-inputbar {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .sl-footer {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .sl-powered {
+    white-space: nowrap;
+  }
+}
+
+/* Desktop: adapt to short viewports */
+@media (min-width: 441px) {
+  .sl-window {
+    max-height: min(var(--sl-window-h), calc(100dvh - 100px));
+  }
+
+  /* Ensure input/footer never shrink on short heights */
+  .sl-inputbar,
+  .sl-footer {
+    flex-shrink: 0 !important;
+    min-height: fit-content;
+  }
+
+  /* Let messages area absorb remaining space */
+  .sl-messages {
+    min-height: 120px;
+  }
+}
+
+/* Very short viewports: prioritize input visibility */
+@media (max-height: 500px) and (min-width: 441px) {
+  .sl-window {
+    height: calc(100dvh - 96px) !important;
+    max-height: calc(100dvh - 96px) !important;
+  }
+
+  .sl-header {
+    padding: 10px 16px;
+  }
+
+  .sl-header__avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .sl-header__name {
+    font-size: 13px;
+  }
+
+  .sl-messages {
+    min-height: 80px;
+    padding: 12px;
+  }
+
+  .sl-inputbar {
+    padding: 10px 12px;
+  }
+}
+
+/* ── Accessibility utility ───────────────────── */
+/* Defined here (not as an inline <style>) so it lives inside the shadow DOM */
+.sl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

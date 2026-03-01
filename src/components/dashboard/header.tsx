@@ -29,32 +29,7 @@ interface Notification {
   type: "crawl" | "billing" | "system";
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "n1",
-    title: "Crawl completed",
-    description: "acme.com finished — 1,243 pages indexed",
-    time: "2m ago",
-    read: false,
-    type: "crawl",
-  },
-  {
-    id: "n2",
-    title: "Crawl failed",
-    description: "docs.acme.com encountered errors on 12 pages",
-    time: "1h ago",
-    read: false,
-    type: "crawl",
-  },
-  {
-    id: "n3",
-    title: "Usage at 80%",
-    description: "You've used 8,000 of your 10,000 monthly pages",
-    time: "3h ago",
-    read: true,
-    type: "billing",
-  },
-];
+const initialNotifications: Notification[] = [];
 
 interface HeaderProps {
   breadcrumbs?: Breadcrumb[];
@@ -64,7 +39,7 @@ interface HeaderProps {
 export function Header({ breadcrumbs = [], className }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState(initialNotifications);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

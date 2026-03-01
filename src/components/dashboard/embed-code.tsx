@@ -1,43 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Globe2, Info } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+type WidgetPosition = "bottom-right" | "bottom-left";
+type SnippetType = "html" | "next" | "react" | "vue";
+
 export interface EmbedConfig {
-  projectId: string;
+  botId: string;
   primaryColor: string;
-  position: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+  position: WidgetPosition;
   welcomeMessage: string;
-  placeholder: string;
-  showBranding: boolean;
-  buttonLabel: string;
+  botName: string;
+  apiEndpoint: string;
 }
 
 const DEFAULT_CONFIG: EmbedConfig = {
-  projectId: "proj_abc123xyz",
-  primaryColor: "#0F172A",
+  botId: "project_id_here",
+  primaryColor: "#0f172a",
   position: "bottom-right",
   welcomeMessage: "Hi! How can I help you today?",
-  placeholder: "Ask me anything...",
-  showBranding: true,
-  buttonLabel: "Chat with us",
+  botName: "SiteLearn Assistant",
+  apiEndpoint: "https://api.sitelearn.io",
 };
+
+const WIDGET_SCRIPT_URL = "https://cdn.sitelearn.ai/widget.iife.js";
 
 interface EmbedCodeProps {
   config?: Partial<EmbedConfig>;
@@ -45,134 +43,260 @@ interface EmbedCodeProps {
 }
 
 const COLOR_PRESETS = [
-  { label: "Slate", value: "#0F172A" },
-  { label: "Blue", value: "#1D4ED8" },
-  { label: "Violet", value: "#7C3AED" },
-  { label: "Rose", value: "#E11D48" },
+  { label: "Slate", value: "#0f172a" },
+  { label: "Blue", value: "#1d4ed8" },
   { label: "Emerald", value: "#059669" },
-  { label: "Amber", value: "#D97706" },
+  { label: "Rose", value: "#e11d48" },
+  { label: "Amber", value: "#d97706" },
 ];
+
+function toWidgetSide(position: WidgetPosition): "left" | "right" {
+  return position === "bottom-left" ? "left" : "right";
+}
 
 export function EmbedCode({ config: configOverride, projectId }: EmbedCodeProps) {
   const [config, setConfig] = useState<EmbedConfig>({
     ...DEFAULT_CONFIG,
-    ...(projectId ? { projectId } : {}),
+    ...(projectId ? { botId: projectId } : {}),
     ...configOverride,
   });
-  const [copied, setCopied] = useState<"script" | "react" | null>(null);
+  const [copied, setCopied] = useState<SnippetType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewInput, setPreviewInput] = useState("");
+  const [previewMessages, setPreviewMessages] = useState<Array<{ role: "assistant" | "user"; content: string }>>([
+    {
+      role: "assistant",
+      content: "Open the real widget on your site to test live answers from learned content.",
+    },
+  ]);
 
   const updateConfig = <K extends keyof EmbedConfig>(key: K, value: EmbedConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const scriptCode = `<!-- SiteLearn Widget -->
-<script
-  src="https://cdn.sitelearn.ai/widget.js"
-  data-project-id="${config.projectId}"
-  data-color="${config.primaryColor}"
-  data-position="${config.position}"
-  data-welcome="${config.welcomeMessage}"
-  data-placeholder="${config.placeholder}"
-  data-branding="${config.showBranding}"
+  const widgetSide = toWidgetSide(config.position);
+
+  const htmlScriptCode = `<script
+  src="${WIDGET_SCRIPT_URL}"
+  data-bot-id="${config.botId}"
+  data-bot-name="${config.botName}"
+  data-primary-color="${config.primaryColor}"
+  data-position="${widgetSide}"
+  data-welcome-message="${config.welcomeMessage}"
+  data-api-endpoint="${config.apiEndpoint}"
   defer
 ></script>`;
 
-  const reactCode = `import { SiteLearnWidget } from '@sitelearn/react';
+  const nextCode = `import Script from "next/script";
 
-export function App() {
+export function ChatWidget() {
   return (
-    <>
-      {/* Your app content */}
-      <SiteLearnWidget
-        projectId="${config.projectId}"
-        primaryColor="${config.primaryColor}"
-        position="${config.position}"
-        welcomeMessage="${config.welcomeMessage}"
-        placeholder="${config.placeholder}"
-        showBranding={${config.showBranding}}
-      />
-    </>
+    <Script
+      id="sitelearn-widget"
+      src="${WIDGET_SCRIPT_URL}"
+      data-bot-id="${config.botId}"
+      data-bot-name="${config.botName}"
+      data-primary-color="${config.primaryColor}"
+      data-position="${widgetSide}"
+      data-welcome-message="${config.welcomeMessage}"
+      data-api-endpoint="${config.apiEndpoint}"
+      strategy="afterInteractive"
+    />
   );
 }`;
 
-  const handleCopy = async (type: "script" | "react") => {
-    const text = type === "script" ? scriptCode : reactCode;
-    await navigator.clipboard.writeText(text);
+  const reactCode = `import { useEffect } from "react";
+
+export function ChatWidget() {
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "${WIDGET_SCRIPT_URL}";
+    script.defer = true;
+    script.dataset.botId = "${config.botId}";
+    script.dataset.botName = "${config.botName}";
+    script.dataset.primaryColor = "${config.primaryColor}";
+    script.dataset.position = "${widgetSide}";
+    script.dataset.welcomeMessage = "${config.welcomeMessage}";
+    script.dataset.apiEndpoint = "${config.apiEndpoint}";
+    document.body.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, []);
+
+  return null;
+}`;
+
+  const vueCode = `<script setup lang="ts">
+import { onMounted, onBeforeUnmount } from "vue";
+
+let scriptEl: HTMLScriptElement | null = null;
+
+onMounted(() => {
+  scriptEl = document.createElement("script");
+  scriptEl.src = "${WIDGET_SCRIPT_URL}";
+  scriptEl.defer = true;
+  scriptEl.dataset.botId = "${config.botId}";
+  scriptEl.dataset.botName = "${config.botName}";
+  scriptEl.dataset.primaryColor = "${config.primaryColor}";
+  scriptEl.dataset.position = "${widgetSide}";
+  scriptEl.dataset.welcomeMessage = "${config.welcomeMessage}";
+  scriptEl.dataset.apiEndpoint = "${config.apiEndpoint}";
+  document.body.appendChild(scriptEl);
+});
+
+onBeforeUnmount(() => {
+  scriptEl?.remove();
+});
+</script>`;
+
+  const snippets: Record<SnippetType, string> = {
+    html: htmlScriptCode,
+    next: nextCode,
+    react: reactCode,
+    vue: vueCode,
+  };
+
+  const handleCopy = async (type: SnippetType) => {
+    await navigator.clipboard.writeText(snippets[type]);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const handleSendPreview = () => {
+    const value = previewInput.trim();
+    if (!value) return;
+
+    setPreviewMessages((current) => [
+      ...current,
+      { role: "user", content: value },
+      {
+        role: "assistant",
+        content: "Preview mode only. Use Playground or your embedded widget for real AI responses.",
+      },
+    ]);
+    setPreviewInput("");
+  };
+
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="code">
+      <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Install on any stack</h3>
+        </div>
+        <ol className="ml-5 list-decimal space-y-1.5 text-xs text-muted-foreground">
+          <li>Pick the snippet for your stack and copy it.</li>
+          <li>Add it once per page (or root layout) and deploy.</li>
+          <li>Open your site and click the chat button to validate replies.</li>
+        </ol>
+      </div>
+
+      <Tabs defaultValue="snippets" className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList className="h-8">
-            <TabsTrigger value="code" className="text-xs">
-              Embed Code
-            </TabsTrigger>
-            <TabsTrigger value="config" className="text-xs">
-              Configure
-            </TabsTrigger>
+            <TabsTrigger value="snippets" className="text-xs">Code Snippets</TabsTrigger>
+            <TabsTrigger value="config" className="text-xs">Widget Config</TabsTrigger>
           </TabsList>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setPreviewVisible(!previewVisible)}
-          >
+
+          <div className="flex items-center gap-2">
             {previewVisible ? (
-              <EyeOff className="h-3.5 w-3.5" />
-            ) : (
-              <Eye className="h-3.5 w-3.5" />
-            )}
-            {previewVisible ? "Hide" : "Preview"}
-          </Button>
+              <div className="flex items-center gap-2 rounded-md border border-border px-2 py-1">
+                <Label htmlFor="preview-open" className="text-[11px] text-muted-foreground">
+                  Open chat
+                </Label>
+                <Switch
+                  id="preview-open"
+                  checked={previewOpen}
+                  onCheckedChange={setPreviewOpen}
+                />
+              </div>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setPreviewVisible((value) => !value)}
+            >
+              {previewVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {previewVisible ? "Hide preview" : "Preview"}
+            </Button>
+          </div>
         </div>
 
-        {/* Code Tab */}
-        <TabsContent value="code" className="mt-4 space-y-4">
-          {/* HTML / Script */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">HTML / Script Tag</Label>
-              <Badge variant="secondary" className="text-[10px]">
-                Recommended
-              </Badge>
-            </div>
-            <CodeBlock
-              code={scriptCode}
-              onCopy={() => handleCopy("script")}
-              copied={copied === "script"}
-              language="html"
-            />
-          </div>
+        <TabsContent value="snippets" className="space-y-4">
+          <Tabs defaultValue="html" className="space-y-3">
+            <TabsList className="h-8">
+              <TabsTrigger value="html" className="text-xs">HTML</TabsTrigger>
+              <TabsTrigger value="next" className="text-xs">Next.js</TabsTrigger>
+              <TabsTrigger value="react" className="text-xs">React</TabsTrigger>
+              <TabsTrigger value="vue" className="text-xs">Vue</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="html">
+              <CodeBlock code={htmlScriptCode} language="html" copied={copied === "html"} onCopy={() => handleCopy("html")} />
+            </TabsContent>
+            <TabsContent value="next">
+              <CodeBlock code={nextCode} language="tsx" copied={copied === "next"} onCopy={() => handleCopy("next")} />
+            </TabsContent>
+            <TabsContent value="react">
+              <CodeBlock code={reactCode} language="tsx" copied={copied === "react"} onCopy={() => handleCopy("react")} />
+            </TabsContent>
+            <TabsContent value="vue">
+              <CodeBlock code={vueCode} language="vue" copied={copied === "vue"} onCopy={() => handleCopy("vue")} />
+            </TabsContent>
+          </Tabs>
 
           <Separator />
 
-          {/* React */}
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <h4 className="flex items-center gap-2 text-xs font-medium">
+              <Globe2 className="h-3.5 w-3.5 text-muted-foreground" />
+              Script attributes used by the widget
+            </h4>
+            <div className="space-y-2 text-xs">
+              {[
+                ["data-bot-id", "Project ID for routing chat requests (required)"],
+                ["data-bot-name", "Name shown in the widget header"],
+                ["data-primary-color", "Widget accent color as #RRGGBB"],
+                ["data-position", "left or right floating position"],
+                ["data-welcome-message", "First message shown on open"],
+                ["data-api-endpoint", "API origin for chat requests"],
+              ].map(([name, description]) => (
+                <div key={name} className="flex gap-2">
+                  <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+                    {name}
+                  </code>
+                  <span className="text-muted-foreground">{description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="config" className="space-y-5">
           <div className="space-y-2">
-            <Label className="text-xs font-medium">React / Next.js</Label>
-            <CodeBlock
-              code={reactCode}
-              onCopy={() => handleCopy("react")}
-              copied={copied === "react"}
-              language="jsx"
+            <Label className="text-xs font-medium">Bot Name</Label>
+            <Input
+              value={config.botName}
+              onChange={(event) => updateConfig("botName", event.target.value)}
+              className="h-8 text-xs"
+              placeholder="SiteLearn Assistant"
             />
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Paste the script tag before the closing{" "}
-            <code className="rounded bg-muted px-1 font-mono text-[11px]">
-              &lt;/body&gt;
-            </code>{" "}
-            tag, or import the React component directly.
-          </p>
-        </TabsContent>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Welcome Message</Label>
+            <Textarea
+              value={config.welcomeMessage}
+              onChange={(event) => updateConfig("welcomeMessage", event.target.value)}
+              className="min-h-0 resize-none text-xs"
+              rows={2}
+            />
+          </div>
 
-        {/* Config Tab */}
-        <TabsContent value="config" className="mt-4 space-y-5">
-          {/* Color */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">Primary Color</Label>
             <div className="flex items-center gap-2">
@@ -180,11 +304,12 @@ export function App() {
                 {COLOR_PRESETS.map((preset) => (
                   <button
                     key={preset.value}
+                    type="button"
                     onClick={() => updateConfig("primaryColor", preset.value)}
                     className={cn(
                       "h-6 w-6 rounded-full border-2 transition-all",
                       config.primaryColor === preset.value
-                        ? "border-foreground scale-110"
+                        ? "scale-110 border-foreground"
                         : "border-transparent hover:border-muted-foreground"
                     )}
                     style={{ backgroundColor: preset.value }}
@@ -193,132 +318,128 @@ export function App() {
                   />
                 ))}
               </div>
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="h-6 w-6 rounded border border-border"
-                  style={{ backgroundColor: config.primaryColor }}
-                />
-                <Input
-                  type="color"
-                  value={config.primaryColor}
-                  onChange={(e) => updateConfig("primaryColor", e.target.value)}
-                  className="h-6 w-20 cursor-pointer border-0 bg-transparent p-0 text-xs"
-                />
-                <Input
-                  value={config.primaryColor}
-                  onChange={(e) => updateConfig("primaryColor", e.target.value)}
-                  className="h-7 w-24 font-mono text-xs"
-                  maxLength={7}
-                />
-              </div>
+              <Input
+                value={config.primaryColor}
+                onChange={(event) => updateConfig("primaryColor", event.target.value)}
+                className="h-8 w-28 font-mono text-xs"
+                maxLength={7}
+              />
             </div>
           </div>
 
-          {/* Position */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Widget Position</Label>
+            <Label className="text-xs font-medium">Position</Label>
             <Select
               value={config.position}
-              onValueChange={(v) =>
-                updateConfig("position", v as EmbedConfig["position"])
-              }
+              onValueChange={(value) => updateConfig("position", value as WidgetPosition)}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bottom-right" className="text-xs">
-                  Bottom Right
-                </SelectItem>
-                <SelectItem value="bottom-left" className="text-xs">
-                  Bottom Left
-                </SelectItem>
-                <SelectItem value="top-right" className="text-xs">
-                  Top Right
-                </SelectItem>
-                <SelectItem value="top-left" className="text-xs">
-                  Top Left
-                </SelectItem>
+                <SelectItem value="bottom-right" className="text-xs">Bottom Right</SelectItem>
+                <SelectItem value="bottom-left" className="text-xs">Bottom Left</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Welcome Message */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Welcome Message</Label>
-            <Textarea
-              value={config.welcomeMessage}
-              onChange={(e) => updateConfig("welcomeMessage", e.target.value)}
-              className="min-h-0 resize-none text-xs"
-              rows={2}
-              placeholder="Hi! How can I help you today?"
-            />
-          </div>
-
-          {/* Placeholder */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Input Placeholder</Label>
+            <Label className="text-xs font-medium">API Endpoint</Label>
             <Input
-              value={config.placeholder}
-              onChange={(e) => updateConfig("placeholder", e.target.value)}
-              className="h-8 text-xs"
-              placeholder="Ask me anything..."
+              value={config.apiEndpoint}
+              onChange={(event) => updateConfig("apiEndpoint", event.target.value)}
+              className="h-8 font-mono text-xs"
+              placeholder="https://api.sitelearn.io"
             />
-          </div>
-
-          {/* Button Label */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Button Label</Label>
-            <Input
-              value={config.buttonLabel}
-              onChange={(e) => updateConfig("buttonLabel", e.target.value)}
-              className="h-8 text-xs"
-              placeholder="Chat with us"
-            />
-          </div>
-
-          {/* Branding */}
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div>
-              <p className="text-xs font-medium text-foreground">Show branding</p>
-              <p className="text-[10px] text-muted-foreground">
-                Display "Powered by SiteLearn" in the widget
-              </p>
-            </div>
-            <Switch
-              checked={config.showBranding}
-              onCheckedChange={(v) => updateConfig("showBranding", v)}
-            />
+            <p className="text-[10px] text-muted-foreground">
+              Keep this as-is unless you are self-hosting the widget backend.
+            </p>
           </div>
         </TabsContent>
       </Tabs>
 
-      {/* Live Preview */}
-      {previewVisible && (
-        <div className="relative h-48 overflow-hidden rounded-xl border border-border bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      {previewVisible ? (
+        <div className="relative min-h-[400px] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-slate-50 to-slate-100 lg:min-h-[520px]">
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-muted-foreground">Your website content here</p>
+            <p className="text-xs text-muted-foreground">Widget placement preview</p>
           </div>
 
-          {/* Simulated widget button */}
-          <div
+          {previewOpen ? (
+            <div
+              className={cn(
+                "absolute bottom-24 flex max-h-[min(560px,calc(100%-7rem))] w-[min(336px,calc(100%-2rem))] flex-col rounded-xl border border-border bg-background shadow-xl lg:w-[min(420px,calc(100%-2rem))] lg:max-h-[min(680px,calc(100%-7rem))]",
+                config.position === "bottom-left" ? "left-4" : "right-4"
+              )}
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+                <p className="text-sm font-medium text-foreground">{config.botName}</p>
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">Online</Badge>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                <div className="space-y-2">
+                  <p className="w-fit max-w-[90%] rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
+                    {config.welcomeMessage}
+                  </p>
+                  {previewMessages.map((message, index) => (
+                    <div
+                      key={`${message.role}-${index}`}
+                      className={cn(
+                        "w-fit max-w-[90%] rounded-xl px-3 py-2 text-xs",
+                        message.role === "assistant"
+                          ? "bg-muted text-muted-foreground"
+                          : "ml-auto text-white"
+                      )}
+                      style={message.role === "user" ? { backgroundColor: config.primaryColor } : undefined}
+                    >
+                      {message.content}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="shrink-0 flex items-end gap-2 border-t border-border px-3 py-2.5">
+                <input
+                  value={previewInput}
+                  onChange={(event) => setPreviewInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleSendPreview();
+                    }
+                  }}
+                  className="h-9 flex-1 rounded-lg border border-border bg-muted/50 px-3 text-xs text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="Type a message..."
+                />
+                <button
+                  type="button"
+                  onClick={handleSendPreview}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition-opacity disabled:opacity-50"
+                  disabled={!previewInput.trim()}
+                  style={{ backgroundColor: config.primaryColor }}
+                  aria-label="Send preview message"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setPreviewOpen((value) => !value)}
             className={cn(
-              "absolute flex items-center gap-2 rounded-full px-4 py-2.5 shadow-lg text-white text-xs font-medium",
-              "transition-transform hover:scale-105 cursor-pointer",
-              config.position === "bottom-right" && "bottom-4 right-4",
-              config.position === "bottom-left" && "bottom-4 left-4",
-              config.position === "top-right" && "top-4 right-4",
-              config.position === "top-left" && "top-4 left-4"
+              "absolute bottom-6 flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-medium text-white shadow-lg transition-transform hover:scale-105",
+              config.position === "bottom-left" ? "left-4" : "right-4"
             )}
             style={{ backgroundColor: config.primaryColor }}
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            {config.buttonLabel}
-          </div>
+            <span className="inline-block h-2 w-2 rounded-full bg-white/90" />
+            {previewOpen ? "Close chat" : "Open chat"}
+          </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -337,19 +458,14 @@ function CodeBlock({
   return (
     <div className="group relative overflow-hidden rounded-lg border border-border bg-muted/50">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           {language}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 gap-1.5 px-2 text-[10px]"
-          onClick={onCopy}
-        >
+        <Button variant="ghost" size="sm" className="h-6 gap-1.5 px-2 text-[10px]" onClick={onCopy}>
           {copied ? (
             <>
               <Check className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-500">Copied!</span>
+              <span className="text-emerald-500">Copied</span>
             </>
           ) : (
             <>
@@ -360,9 +476,7 @@ function CodeBlock({
         </Button>
       </div>
       <pre className="overflow-x-auto p-4">
-        <code className="font-mono text-[11px] leading-relaxed text-foreground">
-          {code}
-        </code>
+        <code className="font-mono text-[11px] leading-relaxed text-foreground">{code}</code>
       </pre>
     </div>
   );

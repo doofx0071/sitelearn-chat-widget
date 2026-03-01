@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { Plus, Globe, LayoutGrid, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,50 +11,40 @@ import { ProjectCard, type Project } from "@/components/dashboard/project-card";
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog";
 import { toast } from "sonner";
 
-// Mock projects for demo — replace with Convex queries
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: "proj_1",
-    name: "Acme Docs",
-    domain: "docs.acme.com",
-    status: "active",
-    pageCount: 1243,
-    lastCrawled: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    favicon: undefined,
-  },
-  {
-    id: "proj_2",
-    name: "Marketing Site",
-    domain: "acme.com",
-    status: "crawling",
-    pageCount: 87,
-    lastCrawled: null,
-    favicon: undefined,
-  },
-  {
-    id: "proj_3",
-    name: "Help Center",
-    domain: "help.acme.com",
-    status: "failed",
-    pageCount: 0,
-    lastCrawled: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    favicon: undefined,
-  },
-  {
-    id: "proj_4",
-    name: "Blog",
-    domain: "blog.acme.com",
-    status: "paused",
-    pageCount: 342,
-    lastCrawled: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    favicon: undefined,
-  },
-];
-
 export default function DashboardPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
-  const isLoading = false;
+  const previousStatusByProjectRef = useRef<Record<string, string>>({});
+  
+  const workspace = useQuery(api.workspaces.getMyWorkspace);
+  const workspaceId = workspace?._id;
+
+  const rawProjects = useQuery(
+    api.projects.list,
+    workspaceId ? { workspaceId } : "skip"
+  );
+  
+  const removeProject = useMutation(api.projects.remove);
+  const startCrawl = useMutation(api.crawl.start.startCrawl);
+
+  const isLoading = rawProjects === undefined;
+
+  // Map Convex projects to the UI Project type
+  const projects: Project[] = (rawProjects || []).map((p: any) => {
+    let mappedStatus: Project["status"] = "pending";
+    if (p.crawlStatus === "crawling") mappedStatus = "crawling";
+    else if (p.crawlStatus === "completed") mappedStatus = "active";
+    else if (p.crawlStatus === "failed") mappedStatus = "failed";
+    else if (p.crawlStatus === "idle") mappedStatus = "paused";
+
+    return {
+      id: p._id,
+      name: p.name,
+      domain: p.domain,
+      status: mappedStatus,
+      pageCount: p.pageCount || 0,
+      lastCrawled: p.lastCrawledAt ? new Date(p.lastCrawledAt).toISOString() : null,
+    };
+  });
 
   const handleSettings = (id: string) => {
     router.push(`/dashboard/projects/${id}`);
@@ -62,28 +54,55 @@ export default function DashboardPage() {
     router.push(`/dashboard/projects/${id}/embed`);
   };
 
-  const handleDelete = (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    toast.success("Project deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await removeProject({ projectId: id as any });
+      toast.success("Project deleted");
+    } catch (error) {
+      toast.error("Failed to delete project");
+    }
   };
 
-  const handleRecrawl = (id: string) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: "crawling" as const } : p))
-    );
-    toast.success("Re-crawl started");
+  const handleRecrawl = async (id: string) => {
+    try {
+      const project = projects.find((p) => p.id === id);
+      if (!project) {
+        toast.error("Project not found");
+        return;
+      }
+
+      await startCrawl({
+        projectId: id as any,
+        url: `https://${project.domain}`,
+        depth: "full",
+      });
+      toast.success("Re-learning started");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start re-learning"
+      );
+    }
   };
+
+  useEffect(() => {
+    if (!rawProjects) return;
+
+    for (const project of rawProjects) {
+      const prev = previousStatusByProjectRef.current[project._id];
+      const curr = project.crawlStatus ?? "idle";
+
+      if (prev === "crawling" && curr === "completed") {
+        toast.success(`Learning finished for ${project.domain}`);
+      }
+      if (prev === "crawling" && curr === "failed") {
+        toast.error(`Learning failed for ${project.domain}`);
+      }
+
+      previousStatusByProjectRef.current[project._id] = curr;
+    }
+  }, [rawProjects]);
 
   const handleProjectCreated = (domain: string) => {
-    const newProject: Project = {
-      id: `proj_${Date.now()}`,
-      name: domain,
-      domain,
-      status: "crawling",
-      pageCount: 0,
-      lastCrawled: null,
-    };
-    setProjects((prev) => [newProject, ...prev]);
     toast.success(`Project created for ${domain}`);
   };
 
@@ -125,7 +144,7 @@ export default function DashboardPage() {
                 No projects yet
               </h3>
               <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                Add your first website to get started. SiteLearn will crawl
+                Add your first website to get started. SiteLearn will learn
                 your content and build an AI chat widget.
               </p>
               <CreateProjectDialog

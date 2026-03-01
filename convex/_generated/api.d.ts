@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as chat_conversations from "../chat/conversations.js";
 import type * as chat_llm from "../chat/llm.js";
 import type * as chat_rag from "../chat/rag.js";
 import type * as crawl_discover from "../crawl/discover.js";
@@ -16,13 +18,17 @@ import type * as crawl_discoverMutations from "../crawl/discoverMutations.js";
 import type * as crawl_embed from "../crawl/embed.js";
 import type * as crawl_embedMutations from "../crawl/embedMutations.js";
 import type * as crawl_index from "../crawl/index.js";
+import type * as crawl_scheduler from "../crawl/scheduler.js";
 import type * as crawl_start from "../crawl/start.js";
 import type * as crawl_worker from "../crawl/worker.js";
 import type * as crawl_workerMutations from "../crawl/workerMutations.js";
 import type * as domains_verify from "../domains/verify.js";
+import type * as firecrawl from "../firecrawl.js";
 import type * as http from "../http.js";
 import type * as lib_authorization from "../lib/authorization.js";
+import type * as projects from "../projects.js";
 import type * as widget_auth from "../widget/auth.js";
+import type * as workspaces from "../workspaces.js";
 
 import type {
   ApiFromModules,
@@ -31,7 +37,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   auth: typeof auth;
+  "chat/conversations": typeof chat_conversations;
   "chat/llm": typeof chat_llm;
   "chat/rag": typeof chat_rag;
   "crawl/discover": typeof crawl_discover;
@@ -39,13 +47,17 @@ declare const fullApi: ApiFromModules<{
   "crawl/embed": typeof crawl_embed;
   "crawl/embedMutations": typeof crawl_embedMutations;
   "crawl/index": typeof crawl_index;
+  "crawl/scheduler": typeof crawl_scheduler;
   "crawl/start": typeof crawl_start;
   "crawl/worker": typeof crawl_worker;
   "crawl/workerMutations": typeof crawl_workerMutations;
   "domains/verify": typeof domains_verify;
+  firecrawl: typeof firecrawl;
   http: typeof http;
   "lib/authorization": typeof lib_authorization;
+  projects: typeof projects;
   "widget/auth": typeof widget_auth;
+  workspaces: typeof workspaces;
 }>;
 
 /**
@@ -2050,6 +2062,378 @@ export declare const components: {
     adapterTest: {
       runCustomTests: FunctionReference<"action", "internal", any, any>;
       runTests: FunctionReference<"action", "internal", any, any>;
+    };
+  };
+  firecrawlScrape: {
+    lib: {
+      deleteScrape: FunctionReference<
+        "mutation",
+        "internal",
+        { id: string },
+        { deletedFileCount: number; success: boolean }
+      >;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getByUrl: FunctionReference<
+        "query",
+        "internal",
+        { url: string },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getCached: FunctionReference<
+        "query",
+        "internal",
+        {
+          formats?: Array<
+            | "markdown"
+            | "html"
+            | "rawHtml"
+            | "links"
+            | "images"
+            | "summary"
+            | "screenshot"
+          >;
+          url: string;
+        },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getContent: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileUrl?: string | null;
+          formats: Array<string>;
+          html?: string;
+          htmlFileUrl?: string | null;
+          images?: Array<string>;
+          imagesFileUrl?: string | null;
+          links?: Array<string>;
+          linksFileUrl?: string | null;
+          markdown?: string;
+          markdownFileUrl?: string | null;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileUrl?: string | null;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileUrl?: string | null;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+        }
+      >;
+      getStatus: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+        }
+      >;
+      invalidate: FunctionReference<
+        "mutation",
+        "internal",
+        { url: string },
+        { invalidatedCount: number; success: boolean }
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        {
+          cursor?: string;
+          limit?: number;
+          status?: "pending" | "scraping" | "completed" | "failed";
+        },
+        {
+          hasMore: boolean;
+          nextCursor: null | string;
+          scrapes: Array<{
+            _creationTime: number;
+            _id: string;
+            error?: string;
+            errorCode?: number | string;
+            expiresAt: number;
+            extractedJson?: any;
+            extractedJsonFileId?: string;
+            extractionSchema?: any;
+            formats: Array<string>;
+            html?: string;
+            htmlFileId?: string;
+            images?: Array<string>;
+            imagesFileId?: string;
+            links?: Array<string>;
+            linksFileId?: string;
+            markdown?: string;
+            markdownFileId?: string;
+            metadata?: {
+              cacheControl?: string;
+              contentType?: string;
+              description?: string;
+              language?: string;
+              ogDescription?: string;
+              ogImage?: string;
+              ogSiteName?: string;
+              ogTitle?: string;
+              sourceURL?: string;
+              statusCode?: number;
+              title?: string;
+            };
+            normalizedUrl: string;
+            rawHtml?: string;
+            rawHtmlFileId?: string;
+            scrapedAt?: number;
+            scrapingAt?: number;
+            screenshotFileId?: string;
+            screenshotUrl?: string;
+            startedAt: number;
+            status: "pending" | "scraping" | "completed" | "failed";
+            summary?: string;
+            url: string;
+            urlHash: string;
+          }>;
+        }
+      >;
+      listByStatus: FunctionReference<
+        "query",
+        "internal",
+        {
+          limit?: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+        },
+        Array<{
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }>
+      >;
+      startScrape: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          apiKey: string;
+          options?: {
+            excludeTags?: Array<string>;
+            extractionSchema?: any;
+            force?: boolean;
+            formats?: Array<
+              | "markdown"
+              | "html"
+              | "rawHtml"
+              | "links"
+              | "images"
+              | "summary"
+              | "screenshot"
+            >;
+            includeTags?: Array<string>;
+            mobile?: boolean;
+            onlyMainContent?: boolean;
+            proxy?: "basic" | "stealth" | "auto";
+            storeScreenshot?: boolean;
+            ttlMs?: number;
+            waitFor?: number;
+          };
+          url: string;
+        },
+        { jobId: string }
+      >;
     };
   };
 };

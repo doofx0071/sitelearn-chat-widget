@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import {
   Send,
   Bot,
@@ -13,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface Citation {
   id: string;
@@ -37,43 +40,8 @@ export interface Message {
   timestamp: Date;
 }
 
-const SAMPLE_MESSAGES: Message[] = [
-  {
-    id: "1",
-    role: "assistant",
-    content: "Hi! I'm the SiteLearn assistant for this project. Ask me anything about the site's content!",
-    timestamp: new Date(Date.now() - 120000),
-  },
-  {
-    id: "2",
-    role: "user",
-    content: "What are the main features of your product?",
-    timestamp: new Date(Date.now() - 90000),
-  },
-  {
-    id: "3",
-    role: "assistant",
-    content:
-      "Based on the site, the main features include:\n\n1. **AI-powered chat** trained on your site's content\n2. **Automatic crawling** that keeps the bot up to date\n3. **Easy embedding** with a single script tag\n4. **Analytics** to see what users are asking",
-    citations: [
-      {
-        id: "c1",
-        title: "Features Overview",
-        url: "https://acme.com/features",
-        snippet: "SiteLearn crawls your entire website and trains an AI chatbot...",
-      },
-      {
-        id: "c2",
-        title: "Getting Started",
-        url: "https://acme.com/docs/getting-started",
-        snippet: "Embed your bot with a single line of JavaScript...",
-      },
-    ],
-    timestamp: new Date(Date.now() - 60000),
-  },
-];
-
 interface ChatPlaygroundProps {
+  projectId?: string;
   projectName?: string;
   projectDomain?: string;
   className?: string;
@@ -90,15 +58,58 @@ function parseMarkdown(text: string): string {
 }
 
 export function ChatPlayground({
+  projectId,
   projectName = "My Project",
   projectDomain = "example.com",
   className,
 }: ChatPlaygroundProps) {
-  const [messages, setMessages] = useState<Message[]>(SAMPLE_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<Id<"conversations"> | null>(null);
+  const [sessionId, setSessionId] = useState<string>("");
+
+  const createConversation = useMutation(api.chat.rag.createConversation);
+  const addMessage = useMutation(api.chat.rag.addMessage);
+  const conversation = useQuery(
+    api.chat.rag.getConversation,
+    conversationId ? { conversationId } : "skip"
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const key = "sitelearn-playground-session";
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      setSessionId(existing);
+      return;
+    }
+    const next = `sess_${crypto.randomUUID()}`;
+    localStorage.setItem(key, next);
+    setSessionId(next);
+  }, []);
+
+  useEffect(() => {
+    if (!conversation?.messages) return;
+    const mapped: Message[] = conversation.messages.map((m: any) => ({
+      id: m._id,
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+      citations: (m.sources ?? []).map((s: any, i: number) => ({
+        id: `${m._id}-${i}`,
+        title: s.title || s.url,
+        url: s.url,
+        snippet: s.snippet,
+      })),
+      timestamp: new Date(m.createdAt),
+    }));
+    setMessages(mapped);
+
+    if (mapped.length > 0 && mapped[mapped.length - 1].role === "assistant") {
+      setIsLoading(false);
+    }
+  }, [conversation]);
 
   useEffect(() => {
     // Scroll to bottom on new messages
@@ -111,37 +122,32 @@ export function ChatPlayground({
     const trimmed = input.trim();
     if (!trimmed || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: trimmed,
-      timestamp: new Date(),
-    };
+    if (!projectId) {
+      toast.error("Missing project ID for playground chat.");
+      return;
+    }
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
+    try {
+      let activeConversationId = conversationId;
+      if (!activeConversationId) {
+        activeConversationId = await createConversation({
+          projectId: projectId as Id<"projects">,
+          sessionId: sessionId || `sess_${Date.now()}`,
+        });
+        setConversationId(activeConversationId);
+      }
 
-    // Simulate AI response
-    await new Promise((r) => setTimeout(r, 1500));
-
-    const aiMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `This is a simulated response for testing purposes. In production, this would be an AI-generated answer based on **${projectDomain}** content, with relevant citations from indexed pages.`,
-      citations: [
-        {
-          id: "sim-c1",
-          title: "Sample Page",
-          url: `https://${projectDomain}/sample`,
-          snippet: "This is where the relevant content was found...",
-        },
-      ],
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, aiMessage]);
-    setIsLoading(false);
+      setIsLoading(true);
+      setInput("");
+      await addMessage({
+        conversationId: activeConversationId,
+        role: "user",
+        content: trimmed,
+      });
+    } catch {
+      setIsLoading(false);
+      toast.error("Failed to send message.");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -152,15 +158,17 @@ export function ChatPlayground({
   };
 
   const reset = () => {
-    setMessages([SAMPLE_MESSAGES[0]]);
+    setConversationId(null);
+    setMessages([]);
     setInput("");
+    setIsLoading(false);
   };
 
   return (
     <TooltipProvider>
       <div
         className={cn(
-          "flex h-[560px] flex-col overflow-hidden rounded-xl border border-border bg-card",
+          "flex h-[min(72vh,560px)] min-h-[420px] flex-col overflow-hidden rounded-xl border border-border bg-card",
           className
         )}
       >
@@ -202,7 +210,7 @@ export function ChatPlayground({
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1" ref={scrollRef as React.RefObject<React.ElementRef<typeof ScrollArea>>}>
+        <div className="min-h-0 flex-1 overflow-y-auto" ref={scrollRef}>
           <div className="flex flex-col gap-4 p-4">
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
@@ -221,13 +229,13 @@ export function ChatPlayground({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Info bar */}
         <div className="flex items-center gap-1.5 border-t border-border bg-muted/40 px-4 py-2">
           <Info className="h-3 w-3 shrink-0 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">
-            Testing mode — responses are simulated. Deploy the widget for real AI answers.
+            Playground messages use the same global AI configuration as the widget.
           </p>
         </div>
 

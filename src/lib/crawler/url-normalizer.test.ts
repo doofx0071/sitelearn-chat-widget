@@ -9,6 +9,22 @@ describe('url-normalizer', () => {
     it('should strip fragments', () => {
       expect(normalizeUrl('https://example.com/page#section', 'https://example.com')).toBe('https://example.com/page');
     });
+    it('should handle invalid URLs', () => {
+      expect(normalizeUrl('not-a-url', 'https://example.com')).toBe('https://example.com/not-a-url');
+    });
+    it('should handle empty strings', () => {
+      expect(normalizeUrl('', 'https://example.com')).toBe('https://example.com/');
+    });
+    it('should not double prefix https://', () => {
+      expect(normalizeUrl('https://example.com', 'https://example.com')).toBe('https://example.com/');
+    });
+    it('should handle malformed input with double protocol', () => {
+      // This is the bug we are looking for
+      expect(normalizeUrl('https://https://example.com', 'https://example.com')).toBe('https://example.com/');
+    });
+    it('should handle extractDomain with double protocol', () => {
+      expect(extractDomain('https://https://example.com')).toBe('example.com');
+    });
   });
 
   describe('isSameDomain', () => {
@@ -18,11 +34,20 @@ describe('url-normalizer', () => {
     it('should return false for different domains', () => {
       expect(isSameDomain('https://google.com', 'https://example.com')).toBe(false);
     });
+    it('should handle invalid domains', () => {
+      expect(isSameDomain('invalid', 'example.com')).toBe(false);
+    });
   });
 
   describe('extractDomain', () => {
     it('should extract domain and remove www', () => {
       expect(extractDomain('https://www.example.com/path')).toBe('example.com');
+    });
+    it('should handle subdomains', () => {
+      expect(extractDomain('https://app.staging.example.com')).toBe('app.staging.example.com');
+    });
+    it('should handle URLs without protocol', () => {
+      expect(extractDomain('example.com/path')).toBe('example.com');
     });
   });
 
