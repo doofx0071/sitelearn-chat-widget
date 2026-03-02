@@ -23,7 +23,6 @@ export interface EmbedConfig {
   position: WidgetPosition;
   welcomeMessage: string;
   botName: string;
-  apiEndpoint: string;
 }
 
 const DEFAULT_CONFIG: EmbedConfig = {
@@ -32,10 +31,25 @@ const DEFAULT_CONFIG: EmbedConfig = {
   position: "bottom-right",
   welcomeMessage: "Hi! How can I help you today?",
   botName: "SiteLearn Assistant",
-  apiEndpoint: "https://api.sitelearn.io",
 };
 
-const WIDGET_SCRIPT_URL = "https://cdn.sitelearn.ai/widget.iife.js";
+/**
+ * Resolves the widget script URL with fallback chain:
+ * 1. NEXT_PUBLIC_WIDGET_SCRIPT_URL env var (if provided)
+ * 2. ${NEXT_PUBLIC_SITE_URL}/widget.iife.js (if site URL exists)
+ * 3. /widget.iife.js (relative path fallback)
+ */
+function getWidgetScriptUrl(): string {
+  const envScriptUrl = process.env.NEXT_PUBLIC_WIDGET_SCRIPT_URL;
+  if (envScriptUrl) return envScriptUrl;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) return `${siteUrl.replace(/\/$/, "")}/widget.iife.js`;
+
+  return "/widget.iife.js";
+}
+
+const WIDGET_SCRIPT_URL = getWidgetScriptUrl();
 
 interface EmbedCodeProps {
   config?: Partial<EmbedConfig>;
@@ -84,7 +98,6 @@ export function EmbedCode({ config: configOverride, projectId }: EmbedCodeProps)
   data-primary-color="${config.primaryColor}"
   data-position="${widgetSide}"
   data-welcome-message="${config.welcomeMessage}"
-  data-api-endpoint="${config.apiEndpoint}"
   defer
 ></script>`;
 
@@ -100,7 +113,6 @@ export function ChatWidget() {
       data-primary-color="${config.primaryColor}"
       data-position="${widgetSide}"
       data-welcome-message="${config.welcomeMessage}"
-      data-api-endpoint="${config.apiEndpoint}"
       strategy="afterInteractive"
     />
   );
@@ -118,7 +130,6 @@ export function ChatWidget() {
     script.dataset.primaryColor = "${config.primaryColor}";
     script.dataset.position = "${widgetSide}";
     script.dataset.welcomeMessage = "${config.welcomeMessage}";
-    script.dataset.apiEndpoint = "${config.apiEndpoint}";
     document.body.appendChild(script);
 
     return () => {
@@ -143,7 +154,6 @@ onMounted(() => {
   scriptEl.dataset.primaryColor = "${config.primaryColor}";
   scriptEl.dataset.position = "${widgetSide}";
   scriptEl.dataset.welcomeMessage = "${config.welcomeMessage}";
-  scriptEl.dataset.apiEndpoint = "${config.apiEndpoint}";
   document.body.appendChild(scriptEl);
 });
 
@@ -263,7 +273,6 @@ onBeforeUnmount(() => {
                 ["data-primary-color", "Widget accent color as #RRGGBB"],
                 ["data-position", "left or right floating position"],
                 ["data-welcome-message", "First message shown on open"],
-                ["data-api-endpoint", "API origin for chat requests"],
               ].map(([name, description]) => (
                 <div key={name} className="flex gap-2">
                   <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
@@ -341,19 +350,6 @@ onBeforeUnmount(() => {
                 <SelectItem value="bottom-left" className="text-xs">Bottom Left</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">API Endpoint</Label>
-            <Input
-              value={config.apiEndpoint}
-              onChange={(event) => updateConfig("apiEndpoint", event.target.value)}
-              className="h-8 font-mono text-xs"
-              placeholder="https://api.sitelearn.io"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Keep this as-is unless you are self-hosting the widget backend.
-            </p>
           </div>
         </TabsContent>
       </Tabs>

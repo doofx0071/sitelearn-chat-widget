@@ -21,6 +21,29 @@ function getDataAttr(el: HTMLElement, key: string, fallback = ''): string {
 }
 
 /**
+ * Infers the default API endpoint from the script's origin.
+ * Falls back to window.location.origin if the script origin cannot be determined.
+ */
+function inferApiEndpoint(script: HTMLElement): string {
+  // If explicitly provided via data attribute, honor it
+  const explicitEndpoint = getDataAttr(script, 'apiEndpoint') || getDataAttr(script, 'api-endpoint');
+  if (explicitEndpoint) return explicitEndpoint;
+
+  // Try to infer from script src origin
+  if (script instanceof HTMLScriptElement && script.src) {
+    try {
+      const scriptUrl = new URL(script.src, window.location.href);
+      return scriptUrl.origin;
+    } catch {
+      // Invalid URL, fall through
+    }
+  }
+
+  // Fallback to current page origin
+  return window.location.origin;
+}
+
+/**
  * Reads WidgetConfig from a script element's data-* attributes.
  * Supports both camelCase (data-botId) and kebab-case (data-bot-id) forms.
  */
@@ -38,7 +61,7 @@ function readConfig(script: HTMLElement): WidgetConfig {
   return {
     botId:          getDataAttr(script, 'botId',          getDataAttr(script, 'bot-id',          'default')),
     primaryColor:   getDataAttr(script, 'primaryColor',   getDataAttr(script, 'primary-color',   '#5B6AF0')),
-    apiEndpoint:    getDataAttr(script, 'apiEndpoint',    getDataAttr(script, 'api-endpoint',    'https://api.sitelearn.io')),
+    apiEndpoint:    inferApiEndpoint(script),
     welcomeMessage: getDataAttr(script, 'welcomeMessage', getDataAttr(script, 'welcome-message', 'Hi there! How can I help you today?')),
     botName:        getDataAttr(script, 'botName',        getDataAttr(script, 'bot-name',        'SiteLearn AI')),
     botAvatar:      getDataAttr(script, 'botAvatar',      getDataAttr(script, 'bot-avatar',      '')),
