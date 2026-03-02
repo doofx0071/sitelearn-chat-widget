@@ -33,11 +33,14 @@ const DEFAULT_CONFIG: EmbedConfig = {
   botName: "SiteLearn Assistant",
 };
 
+const WIDGET_SCRIPT_FALLBACK = "https://sitelearn.doofs.tech/widget.iife.js";
+
 /**
  * Resolves the widget script URL with fallback chain:
  * 1. NEXT_PUBLIC_WIDGET_SCRIPT_URL env var (if provided)
  * 2. ${NEXT_PUBLIC_SITE_URL}/widget.iife.js (if site URL exists)
- * 3. /widget.iife.js (relative path fallback)
+ * 3. window.location.origin + "/widget.iife.js" (browser only)
+ * 4. https://sitelearn.doofs.tech/widget.iife.js (SSR fallback)
  */
 function getWidgetScriptUrl(): string {
   const envScriptUrl = process.env.NEXT_PUBLIC_WIDGET_SCRIPT_URL;
@@ -46,7 +49,13 @@ function getWidgetScriptUrl(): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (siteUrl) return `${siteUrl.replace(/\/$/, "")}/widget.iife.js`;
 
-  return "/widget.iife.js";
+  // Browser: use current origin
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/widget.iife.js`;
+  }
+
+  // SSR: use hosted fallback
+  return WIDGET_SCRIPT_FALLBACK;
 }
 
 const WIDGET_SCRIPT_URL = getWidgetScriptUrl();

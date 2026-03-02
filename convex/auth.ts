@@ -6,14 +6,57 @@ import { query } from "./_generated/server";
 import { betterAuth } from "better-auth/minimal";
 import authConfig from "./auth.config";
 
-const siteUrl = process.env.SITE_URL || "http://localhost:3000";
+/**
+ * Normalize URL by removing trailing slash
+ */
+function normalizeOrigin(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+/**
+ * Parse comma-separated origins string into array of normalized origins
+ */
+function parseOriginsList(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((origin) => normalizeOrigin(origin.trim()))
+    .filter((origin) => origin.length > 0);
+}
+
+/**
+ * Build trusted origins from multiple environment sources
+ */
+function buildTrustedOrigins(): string[] {
+  const origins = new Set<string>();
+
+  // Primary site URL resolution
+  const siteUrl = process.env.SITE_URL || process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const normalizedSiteUrl = normalizeOrigin(siteUrl);
+  origins.add(normalizedSiteUrl);
+
+  // Add individual env vars if present
+  if (process.env.SITE_URL) origins.add(normalizeOrigin(process.env.SITE_URL));
+  if (process.env.BETTER_AUTH_URL) origins.add(normalizeOrigin(process.env.BETTER_AUTH_URL));
+  if (process.env.NEXT_PUBLIC_SITE_URL) origins.add(normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL));
+
+  // Add comma-separated origin lists
+  parseOriginsList(process.env.ALLOWED_ORIGINS).forEach((o) => origins.add(o));
+  parseOriginsList(process.env.TRUSTED_ORIGINS).forEach((o) => origins.add(o));
+  parseOriginsList(process.env.BETTER_AUTH_TRUSTED_ORIGINS).forEach((o) => origins.add(o));
+
+  return Array.from(origins);
+}
+
+const siteUrl = process.env.SITE_URL || process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const trustedOrigins = buildTrustedOrigins();
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     baseURL: siteUrl,
-    trustedOrigins: [siteUrl],
+    trustedOrigins,
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
