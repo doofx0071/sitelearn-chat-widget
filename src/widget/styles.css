@@ -593,8 +593,14 @@
   resize: none;
   max-height: 120px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   outline: none;
   transition: border-color var(--sl-transition), box-shadow var(--sl-transition);
+}
+
+.sl-textarea::-webkit-scrollbar {
+  display: none;
 }
 
 .sl-textarea::placeholder {
