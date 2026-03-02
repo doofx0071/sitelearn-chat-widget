@@ -23,6 +23,21 @@ function isLocalhost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+function normalizeStoredDomain(domain: string): string {
+  const trimmed = domain.trim().toLowerCase();
+  if (!trimmed || trimmed === "*") return trimmed;
+
+  try {
+    const candidate = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+    return new URL(candidate).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return trimmed
+      .replace(/^https?:\/\//, "")
+      .split("/")[0]
+      .replace(/^www\./, "");
+  }
+}
+
 function isAllowedOrigin(origin: string | null, domain: string): boolean {
   const parsedOrigin = parseOrigin(origin);
   if (!parsedOrigin) return false;
@@ -38,7 +53,8 @@ function isAllowedOrigin(origin: string | null, domain: string): boolean {
     return false;
   }
 
-  const targetDomain = domain.toLowerCase();
+  const targetDomain = normalizeStoredDomain(domain);
+  if (!targetDomain) return false;
   return hostname === targetDomain || hostname.endsWith(`.${targetDomain}`);
 }
 
