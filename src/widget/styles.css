@@ -392,6 +392,12 @@
   box-shadow: var(--sl-shadow-sm);
 }
 
+.sl-bubble--error {
+  border: 1px solid rgba(255, 77, 106, 0.35);
+  background: rgba(255, 77, 106, 0.1);
+  color: #b91c3c;
+}
+
 .sl-msg--system .sl-bubble {
   background: var(--sl-surface-3);
   color: var(--sl-text-2);
@@ -401,21 +407,25 @@
   border-radius: 20px;
 }
 
-/* Streaming cursor */
-.sl-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  background: var(--sl-primary);
-  vertical-align: text-bottom;
-  border-radius: 1px;
-  animation: sl-blink 0.9s infinite;
-  margin-left: 2px;
+/* Inline streaming indicator */
+.sl-thinking-inline {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sl-text-3);
+  font-size: 11px;
+  font-weight: 600;
 }
 
-@keyframes sl-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+.sl-thinking-inline__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.sl-dot--sm {
+  width: 5px;
+  height: 5px;
 }
 
 /* Timestamp */
@@ -429,17 +439,17 @@
 /* ── Citations ───────────────────────────────── */
 
 .sl-citations {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .sl-citation {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 6px 8px;
   background: var(--sl-surface);
   border: 1px solid var(--sl-border);
   border-radius: var(--sl-radius-sm);
@@ -454,10 +464,10 @@
 
 .sl-citation__icon {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   background: var(--sl-primary-ghost);
-  border-radius: 6px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -470,22 +480,24 @@
 }
 
 .sl-citation__title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   color: var(--sl-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .sl-citation__excerpt {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--sl-text-2);
-  margin-top: 2px;
+  margin-top: 1px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.35;
 }
 
 /* ── Feedback bar ────────────────────────────── */
@@ -550,6 +562,13 @@
   width: fit-content;
   box-shadow: var(--sl-shadow-sm);
   animation: sl-msg-in 0.25s ease both;
+}
+
+.sl-typing__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--sl-text-2);
+  margin-right: 2px;
 }
 
 .sl-dot {
@@ -625,6 +644,18 @@
   justify-content: center;
   color: #fff;
   transition: background var(--sl-transition), transform var(--sl-transition);
+}
+
+.sl-send--loading {
+  opacity: 0.85;
+}
+
+.sl-icon-spin {
+  animation: sl-spin 0.8s linear infinite;
+}
+
+@keyframes sl-spin {
+  to { transform: rotate(360deg); }
 }
 
 .sl-send:hover:not(:disabled) {
@@ -780,21 +811,23 @@
   }
 
   .sl-citation {
-    padding: 6px 8px;
-    gap: 6px;
+    padding: 5px 6px;
+    gap: 5px;
   }
 
   .sl-citation__icon {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
   }
 
   .sl-citation__title {
-    font-size: 11px;
+    font-size: 10.5px;
   }
 
   .sl-citation__excerpt {
-    font-size: 10px;
+    font-size: 9.5px;
+    margin-top: 0;
   }
 
   .sl-feedback {
@@ -914,6 +947,31 @@
 
   .sl-powered {
     white-space: nowrap;
+  }
+
+  .sl-citations {
+    margin-top: 6px;
+    gap: 3px;
+  }
+
+  .sl-citation {
+    padding: 5px 7px;
+    gap: 5px;
+  }
+
+  .sl-citation__icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+  }
+
+  .sl-citation__title {
+    font-size: 11px;
+  }
+
+  .sl-citation__excerpt {
+    font-size: 10px;
+    margin-top: 0;
   }
 }
 
@@ -1084,26 +1142,27 @@
   }
 
   .sl-citations {
-    margin-top: 6px;
-    gap: 4px;
+    margin-top: 4px;
+    gap: 3px;
   }
 
   .sl-citation {
-    padding: 5px 7px;
-    gap: 5px;
+    padding: 4px 6px;
+    gap: 4px;
   }
 
   .sl-citation__icon {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
   }
 
   .sl-citation__title {
-    font-size: 10.5px;
+    font-size: 10px;
   }
 
   .sl-citation__excerpt {
-    font-size: 9.5px;
+    font-size: 9px;
     -webkit-line-clamp: 1;
   }
 
@@ -1317,7 +1376,8 @@
     animation: none;
   }
 
-  .sl-cursor {
+  .sl-thinking-inline,
+  .sl-icon-spin {
     animation: none;
     opacity: 1;
   }

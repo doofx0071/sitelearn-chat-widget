@@ -24,6 +24,12 @@ const IconSend = () => (
   </svg>
 );
 
+const IconLoader = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" width="18" height="18" className="sl-icon-spin">
+    <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+  </svg>
+);
+
 const IconThumbUp = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
     <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
@@ -202,11 +208,10 @@ const FeedbackBar: React.FC<FeedbackBarProps> = ({
   </div>
 );
 
-interface TypingIndicatorProps {}
-
-const TypingIndicator: React.FC<TypingIndicatorProps> = () => (
-  <div className="sl-msg sl-msg--assistant" aria-label="Bot is typing">
+const TypingIndicator: React.FC = () => (
+  <div className="sl-msg sl-msg--assistant" role="status" aria-label="Assistant is thinking">
     <div className="sl-typing">
+      <span className="sl-typing__label">Thinking</span>
       <div className="sl-dot" />
       <div className="sl-dot" />
       <div className="sl-dot" />
@@ -256,7 +261,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onFeedback }) =>
       ) : (
         message.content
       )}
-      {message.isStreaming && <span className="sl-cursor" aria-hidden="true" />}
+      {message.isStreaming && (
+        <span className="sl-thinking-inline" role="status" aria-label="Assistant is thinking">
+          <span className="sl-thinking-inline__text">Thinking</span>
+          <span className="sl-thinking-inline__dots" aria-hidden="true">
+            <span className="sl-dot sl-dot--sm" />
+            <span className="sl-dot sl-dot--sm" />
+            <span className="sl-dot sl-dot--sm" />
+          </span>
+        </span>
+      )}
     </div>
     {message.citations && message.citations.length > 0 && (
       <Citations items={message.citations} />
@@ -540,7 +554,7 @@ const Widget: React.FC<WidgetProps> = ({
           </div>
           <div className="sl-header__info">
             <p id={labelId} className="sl-header__name">{botName}</p>
-            <p className="sl-header__status">Online</p>
+            <p className="sl-header__status">{isLoading ? "Thinking..." : "Online"}</p>
           </div>
           <div className="sl-header__actions">
             <button
@@ -595,18 +609,19 @@ const Widget: React.FC<WidgetProps> = ({
             value={inputValue}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything…"
+            placeholder={isLoading ? "Thinking..." : "Ask anything..."}
             disabled={isLoading}
             aria-disabled={isLoading}
           />
           <button
-            className="sl-send"
+            className={`sl-send${isLoading ? ' sl-send--loading' : ''}`}
             onClick={sendCurrentMessage}
             disabled={isLoading || !inputValue.trim()}
             aria-label="Send message"
             title="Send (Enter)"
+            aria-busy={isLoading}
           >
-            <IconSend />
+            {isLoading ? <IconLoader /> : <IconSend />}
           </button>
         </div>
 
