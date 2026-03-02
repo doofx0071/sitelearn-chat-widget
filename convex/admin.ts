@@ -237,3 +237,72 @@ export const setAIConfig = mutation({
     }
   },
 });
+
+export const getSecurityStats = query({
+  args: {
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await checkSuperAdmin(ctx);
+
+    const days = args.days ?? 7;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    const events = await ctx.db
+      .query("securityEvents")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", cutoff))
+      .collect();
+
+    const bySeverity = {
+      low: 0,
+      medium: 0,
+      high: 0,
+      critical: 0,
+    };
+
+    const byType: Record<string, number> = {};
+    const byDay: Record<string, number> = {};
+
+    for (const event of events) {
+      bySeverity[event.severity] += 1;
+      byType[event.eventType] = (byType[event.eventType] ?? 0) + 1;
+      byDay[event.dayBucket] = (byDay[event.dayBucket] ?? 0) + 1;
+    }
+
+    return {
+      total: events.length,
+      blocked: events.filter((event) => event.blocked).length,
+      bySeverity,
+      byType,
+      byDay,
+    };
+  },
+});
+
+export const listSecurityEvents = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await checkSuperAdmin(ctx);
+
+    const limit = Math.min(args.limit ?? 50, 200);
+    const events = await ctx.db
+      .query("securityEvents")
+      .order("desc")
+      .take(limit);
+
+    return events.map((event) => ({
+      _id: event._id,
+      projectId: event.projectId,
+      eventType: event.eventType,
+      severity: event.severity,
+      patternsMatched: event.patternsMatched,
+      confidenceScore: event.confidenceScore,
+      contentLength: event.contentLength,
+      endpoint: event.endpoint,
+      blocked: event.blocked,
+      createdAt: event.createdAt,
+    }));
+  },
+});

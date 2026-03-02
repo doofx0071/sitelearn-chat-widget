@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
 function corsHeaders(origin: string | null): HeadersInit {
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
+  const headers: HeadersInit = {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     Vary: "Origin",
+    "X-Content-Type-Options": "nosniff",
   };
+
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
 }
 
 export async function OPTIONS(request: NextRequest) {
@@ -34,6 +40,9 @@ export async function GET(request: NextRequest) {
 
   const response = await fetch(`${convexSiteUrl}/api/widget/config?botId=${encodeURIComponent(botId)}`, {
     method: "GET",
+    headers: {
+      ...(origin ? { Origin: origin } : {}),
+    },
   });
 
   const payload = await response.text();

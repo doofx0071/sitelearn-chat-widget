@@ -4,6 +4,7 @@ import {
   Building2,
   HeartPulse,
   BrainCircuit,
+  ShieldAlert,
   LucideIcon,
 } from "lucide-react";
 
@@ -69,6 +70,12 @@ export function getAdminMenuList(_pathname: string): Group[] {
           href: "/admin/ai",
           label: "AI",
           icon: BrainCircuit,
+          submenus: [],
+        },
+        {
+          href: "/admin/security",
+          label: "Security",
+          icon: ShieldAlert,
           submenus: [],
         },
       ],

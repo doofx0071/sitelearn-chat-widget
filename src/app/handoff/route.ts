@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
 function corsHeaders(origin: string | null): HeadersInit {
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
+  const headers: HeadersInit = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-SiteLearn-Client",
     Vary: "Origin",
+    "X-Content-Type-Options": "nosniff",
   };
+
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
 }
 
 export async function OPTIONS(request: NextRequest) {

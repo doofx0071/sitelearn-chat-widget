@@ -245,4 +245,28 @@ export default defineSchema({
     .index("by_projectId", ["projectId"])
     .index("by_status_scheduled", ["status", "scheduledAt"]),
 
+  securityEvents: defineTable({
+    projectId: v.optional(v.id("projects")),
+    eventType: v.union(
+      v.literal("jailbreak_attempt"),
+      v.literal("prompt_leak_blocked"),
+      v.literal("origin_violation"),
+      v.literal("invalid_credentials"),
+      v.literal("rate_limited")
+    ),
+    severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("critical")),
+    sessionHash: v.string(),
+    ipHash: v.string(),
+    patternsMatched: v.array(v.string()),
+    confidenceScore: v.number(),
+    contentLength: v.number(),
+    endpoint: v.string(),
+    blocked: v.boolean(),
+    createdAt: v.number(),
+    dayBucket: v.string(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_eventType_createdAt", ["eventType", "createdAt"])
+    .index("by_dayBucket", ["dayBucket"]),
+
 });

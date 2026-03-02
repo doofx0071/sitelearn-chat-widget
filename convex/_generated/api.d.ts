@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as chat_conversations from "../chat/conversations.js";
 import type * as chat_llm from "../chat/llm.js";
 import type * as chat_rag from "../chat/rag.js";
+import type * as chat_safety from "../chat/safety.js";
 import type * as crawl_discover from "../crawl/discover.js";
 import type * as crawl_discoverMutations from "../crawl/discoverMutations.js";
 import type * as crawl_embed from "../crawl/embed.js";
@@ -27,6 +28,7 @@ import type * as firecrawl from "../firecrawl.js";
 import type * as http from "../http.js";
 import type * as lib_authorization from "../lib/authorization.js";
 import type * as projects from "../projects.js";
+import type * as security from "../security.js";
 import type * as widget_auth from "../widget/auth.js";
 import type * as workspaces from "../workspaces.js";
 
@@ -42,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   "chat/conversations": typeof chat_conversations;
   "chat/llm": typeof chat_llm;
   "chat/rag": typeof chat_rag;
+  "chat/safety": typeof chat_safety;
   "crawl/discover": typeof crawl_discover;
   "crawl/discoverMutations": typeof crawl_discoverMutations;
   "crawl/embed": typeof crawl_embed;
@@ -56,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/authorization": typeof lib_authorization;
   projects: typeof projects;
+  security: typeof security;
   "widget/auth": typeof widget_auth;
   workspaces: typeof workspaces;
 }>;
