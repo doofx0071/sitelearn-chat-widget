@@ -51,6 +51,22 @@ export default defineSchema({
       welcomeMessage: v.string(),
       primaryColor: v.string(),
       position: v.union(v.literal("bottom-left"), v.literal("bottom-right")),
+      headerFont: v.optional(
+        v.union(
+          v.literal("editorial"),
+          v.literal("modern"),
+          v.literal("classic"),
+          v.literal("minimal")
+        )
+      ),
+      avatarStyle: v.optional(
+        v.union(
+          v.literal("sparkle"),
+          v.literal("bot"),
+          v.literal("chat"),
+          v.literal("initial")
+        )
+      ),
       modelProvider: v.optional(v.union(v.literal("openrouter"), v.literal("custom"))),
       modelId: v.optional(v.string()),
     }),

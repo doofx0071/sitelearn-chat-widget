@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { Check, Copy, Eye, EyeOff, Globe2, Info } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Globe2, Info, Loader2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 type WidgetPosition = "bottom-right" | "bottom-left";
 type SnippetType = "html" | "next" | "react" | "vue";
@@ -27,6 +25,8 @@ export interface EmbedConfig {
   position: WidgetPosition;
   welcomeMessage: string;
   botName: string;
+  headerFont: "editorial" | "modern" | "classic" | "minimal";
+  avatarStyle: "sparkle" | "bot" | "chat" | "initial";
 }
 
 const DEFAULT_CONFIG: EmbedConfig = {
@@ -35,6 +35,8 @@ const DEFAULT_CONFIG: EmbedConfig = {
   position: "bottom-right",
   welcomeMessage: "Hi! How can I help you today?",
   botName: "SiteLearn Assistant",
+  headerFont: "modern",
+  avatarStyle: "bot",
 };
 
 const WIDGET_SCRIPT_FALLBACK = "https://sitelearn.doofs.tech/widget.iife.js";
@@ -82,6 +84,20 @@ const COLOR_PRESETS = [
   { label: "Amber", value: "#d97706" },
 ];
 
+const FONT_OPTIONS: Array<{ value: EmbedConfig["headerFont"]; label: string }> = [
+  { value: "modern", label: "Modern (DM Sans)" },
+  { value: "editorial", label: "Editorial (Lora)" },
+  { value: "classic", label: "Classic (Georgia)" },
+  { value: "minimal", label: "Minimal (System)" },
+];
+
+const AVATAR_OPTIONS: Array<{ value: EmbedConfig["avatarStyle"]; label: string }> = [
+  { value: "bot", label: "Bot icon" },
+  { value: "sparkle", label: "Sparkle" },
+  { value: "chat", label: "Chat bubble" },
+  { value: "initial", label: "Initial letter" },
+];
+
 export function EmbedCode({ config: configOverride, projectId, learningConfig }: EmbedCodeProps) {
   const updateProjectSettings = useMutation(api.projects.updateSettings);
   const [config, setConfig] = useState<EmbedConfig>({
@@ -89,17 +105,14 @@ export function EmbedCode({ config: configOverride, projectId, learningConfig }:
     ...configOverride,
     ...(projectId ? { botId: projectId } : {}),
   });
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [copied, setCopied] = useState<SnippetType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewInput, setPreviewInput] = useState("");
-  const [previewMessages, setPreviewMessages] = useState<Array<{ role: "assistant" | "user"; content: string }>>([
-    {
-      role: "assistant",
-      content: "Open the real widget on your site to test live answers from learned content.",
-    },
-  ]);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedSignatureRef = useRef<string>("");
 
   const hydratedConfig = useMemo(
     () => ({
@@ -112,7 +125,74 @@ export function EmbedCode({ config: configOverride, projectId, learningConfig }:
 
   useEffect(() => {
     setConfig(hydratedConfig);
+    lastSavedSignatureRef.current = JSON.stringify({
+      botConfig: {
+        name: hydratedConfig.botName,
+        welcomeMessage: hydratedConfig.welcomeMessage,
+        primaryColor: hydratedConfig.primaryColor,
+        position: hydratedConfig.position,
+        headerFont: hydratedConfig.headerFont,
+        avatarStyle: hydratedConfig.avatarStyle,
+      },
+    });
   }, [hydratedConfig]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const signature = JSON.stringify({
+      botConfig: {
+        name: config.botName,
+        welcomeMessage: config.welcomeMessage,
+        primaryColor: config.primaryColor,
+        position: config.position,
+        headerFont: config.headerFont,
+        avatarStyle: config.avatarStyle,
+      },
+    });
+
+    if (signature === lastSavedSignatureRef.current) {
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    setSaveState("saving");
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateProjectSettings({
+          projectId: projectId as Id<"projects">,
+          botConfig: {
+            name: config.botName,
+            welcomeMessage: config.welcomeMessage,
+            primaryColor: config.primaryColor,
+            position: config.position,
+            headerFont: config.headerFont,
+            avatarStyle: config.avatarStyle,
+          },
+          learningConfig: learningConfig ?? {
+            depth: "full",
+            schedule: "weekly",
+            excludedPaths: [],
+          },
+        });
+
+        lastSavedSignatureRef.current = signature;
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, 700);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [config, learningConfig, projectId, updateProjectSettings]);
 
   const updateConfig = <K extends keyof EmbedConfig>(key: K, value: EmbedConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
@@ -186,47 +266,70 @@ onBeforeUnmount(() => {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const handleSendPreview = () => {
-    const value = previewInput.trim();
-    if (!value) return;
+  /**
+   * Generates the iframe HTML document that loads the real widget.
+   * Uses srcdoc for a self-contained preview that requires no separate file.
+   */
+  const previewIframeDoc = useMemo(() => {
+    const scriptUrl = WIDGET_SCRIPT_URL;
+    const position = config.position === "bottom-left" ? "left" : "right";
 
-    setPreviewMessages((current) => [
-      ...current,
-      { role: "user", content: value },
-      {
-        role: "assistant",
-        content: "Preview mode only. Use Playground or your embedded widget for real AI responses.",
-      },
-    ]);
-    setPreviewInput("");
-  };
-
-  const handleSaveWidgetConfig = async () => {
-    if (!projectId) return;
-
-    setIsSaving(true);
-    try {
-      await updateProjectSettings({
-        projectId: projectId as Id<"projects">,
-        botConfig: {
-          name: config.botName,
-          welcomeMessage: config.welcomeMessage,
-          primaryColor: config.primaryColor,
-          position: config.position,
-        },
-        learningConfig: learningConfig ?? {
-          depth: "full",
-          schedule: "weekly",
-          excludedPaths: [],
-        },
-      });
-      toast.success("Widget config saved");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save widget config");
-    } finally {
-      setIsSaving(false);
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      font-family: system-ui, -apple-system, sans-serif;
     }
-  };
+    .preview-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-placeholder">Widget placement preview</div>
+   <script
+    src="${scriptUrl}"
+    data-bot-id="${config.botId}"
+  data-bot-name="${config.botName}"
+  data-primary-color="${config.primaryColor}"
+  data-welcome-message="${config.welcomeMessage.replace(/"/g, '&quot;')}"
+  data-header-font="${config.headerFont}"
+  data-avatar-style="${config.avatarStyle}"
+  data-position="${position}"
+  data-auto-open="${previewOpen}"
+  data-disable-server-config="true"
+  defer
+  ></script>
+</body>
+</html>`;
+  }, [
+    config.botId,
+    config.botName,
+    config.primaryColor,
+    config.welcomeMessage,
+    config.position,
+    previewOpen,
+  ]);
+
+  // Reset iframe loaded state when config changes
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [previewIframeDoc]);
 
   return (
     <div className="space-y-6">
@@ -315,6 +418,8 @@ onBeforeUnmount(() => {
                 ["data-primary-color", "Optional override for accent color"],
                 ["data-position", "Optional left/right floating position"],
                 ["data-welcome-message", "Optional override for first message"],
+                ["data-header-font", "Optional font style override"],
+                ["data-avatar-style", "Optional avatar style override"],
               ].map(([name, description]) => (
                 <div key={name} className="flex gap-2">
                   <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
@@ -394,94 +499,82 @@ onBeforeUnmount(() => {
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Header font</Label>
+            <Select
+              value={config.headerFont}
+              onValueChange={(value) => updateConfig("headerFont", value as EmbedConfig["headerFont"])}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FONT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Avatar icon</Label>
+            <Select
+              value={config.avatarStyle}
+              onValueChange={(value) => updateConfig("avatarStyle", value as EmbedConfig["avatarStyle"])}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVATAR_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex justify-end">
-            <Button size="sm" className="h-8 text-xs" onClick={handleSaveWidgetConfig} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save widget config"}
-            </Button>
+            <span className="text-xs text-muted-foreground">
+              {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Auto-saved" : saveState === "error" ? "Save failed" : ""}
+            </span>
           </div>
         </TabsContent>
       </Tabs>
 
       {previewVisible ? (
-        <div className="relative min-h-[400px] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-slate-50 to-slate-100 lg:min-h-[520px]">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-muted-foreground">Widget placement preview</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Live preview using the actual widget bundle
+            </p>
           </div>
-
-          {previewOpen ? (
-            <div
-              className={cn(
-                "absolute bottom-24 flex max-h-[min(560px,calc(100%-7rem))] w-[min(336px,calc(100%-2rem))] flex-col rounded-xl border border-border bg-background shadow-xl lg:w-[min(420px,calc(100%-2rem))] lg:max-h-[min(680px,calc(100%-7rem))]",
-                config.position === "bottom-left" ? "left-4" : "right-4"
-              )}
-            >
-              <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-                <p className="text-sm font-medium text-foreground">{config.botName}</p>
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">Online</Badge>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                <div className="space-y-2">
-                  <p className="w-fit max-w-[90%] rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
-                    {config.welcomeMessage}
-                  </p>
-                  {previewMessages.map((message, index) => (
-                    <div
-                      key={`${message.role}-${index}`}
-                      className={cn(
-                        "w-fit max-w-[90%] rounded-xl px-3 py-2 text-xs",
-                        message.role === "assistant"
-                          ? "bg-muted text-muted-foreground"
-                          : "ml-auto text-white"
-                      )}
-                      style={message.role === "user" ? { backgroundColor: config.primaryColor } : undefined}
-                    >
-                      {message.content}
-                    </div>
-                  ))}
+          <div className="relative overflow-hidden rounded-xl border border-border">
+            {/* Loading overlay */}
+            {!iframeLoaded && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-xs">Loading widget...</span>
                 </div>
               </div>
-              <div className="shrink-0 flex items-end gap-2 border-t border-border px-3 py-2.5">
-                <input
-                  value={previewInput}
-                  onChange={(event) => setPreviewInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleSendPreview();
-                    }
-                  }}
-                  className="h-9 flex-1 rounded-lg border border-border bg-muted/50 px-3 text-xs text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="Type a message..."
-                />
-                <button
-                  type="button"
-                  onClick={handleSendPreview}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition-opacity disabled:opacity-50"
-                  disabled={!previewInput.trim()}
-                  style={{ backgroundColor: config.primaryColor }}
-                  aria-label="Send preview message"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                    <line x1="22" y1="2" x2="11" y2="13"/>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={() => setPreviewOpen((value) => !value)}
-            className={cn(
-              "absolute bottom-6 flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-medium text-white shadow-lg transition-transform hover:scale-105",
-              config.position === "bottom-left" ? "left-4" : "right-4"
             )}
-            style={{ backgroundColor: config.primaryColor }}
-          >
-            <span className="inline-block h-2 w-2 rounded-full bg-white/90" />
-            {previewOpen ? "Close chat" : "Open chat"}
-          </button>
+            {/* Iframe sandbox for widget preview */}
+            <iframe
+              key={iframeKey}
+              srcDoc={previewIframeDoc}
+              onLoad={() => setIframeLoaded(true)}
+              className="h-[520px] w-full bg-gradient-to-br from-slate-50 to-slate-100"
+              sandbox="allow-scripts allow-same-origin"
+              title="Widget preview"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            The widget runs in an isolated iframe. Toggle &quot;Open chat&quot; in the header to test the expanded state.
+          </p>
         </div>
       ) : null}
     </div>

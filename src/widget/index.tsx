@@ -65,6 +65,8 @@ function readConfig(script: HTMLElement): WidgetConfig {
     welcomeMessage: getDataAttr(script, 'welcomeMessage', getDataAttr(script, 'welcome-message', 'Hi there! How can I help you today?')),
     botName:        getDataAttr(script, 'botName',        getDataAttr(script, 'bot-name',        'SiteLearn AI')),
     botAvatar:      getDataAttr(script, 'botAvatar',      getDataAttr(script, 'bot-avatar',      '')),
+    headerFont:     getDataAttr(script, 'headerFont',     getDataAttr(script, 'header-font',     'modern')) as WidgetConfig['headerFont'],
+    avatarStyle:    getDataAttr(script, 'avatarStyle',    getDataAttr(script, 'avatar-style',    'bot')) as WidgetConfig['avatarStyle'],
     autoOpen:       getDataAttr(script, 'autoOpen',       getDataAttr(script, 'auto-open',       'false')) === 'true',
     zIndex:         parseInt(getDataAttr(script, 'zIndex', getDataAttr(script, 'z-index', '9999')), 10),
     position,
@@ -76,6 +78,8 @@ interface RemoteBotConfig {
   welcomeMessage?: string;
   primaryColor?: string;
   position?: 'bottom-left' | 'bottom-right';
+  headerFont?: 'editorial' | 'modern' | 'classic' | 'minimal';
+  avatarStyle?: 'sparkle' | 'bot' | 'chat' | 'initial';
 }
 
 async function hydrateConfigFromServer(config: WidgetConfig): Promise<WidgetConfig> {
@@ -104,6 +108,8 @@ async function hydrateConfigFromServer(config: WidgetConfig): Promise<WidgetConf
       botName: botConfig.name || config.botName,
       welcomeMessage: botConfig.welcomeMessage || config.welcomeMessage,
       primaryColor: botConfig.primaryColor || config.primaryColor,
+      headerFont: botConfig.headerFont || config.headerFont,
+      avatarStyle: botConfig.avatarStyle || config.avatarStyle,
       position:
         botConfig.position === 'bottom-left'
           ? { ...config.position, side: 'left' }
@@ -117,6 +123,38 @@ async function hydrateConfigFromServer(config: WidgetConfig): Promise<WidgetConf
 }
 
 // ─── Mount logic ──────────────────────────────
+
+/**
+ * Sets up dynamic viewport height CSS variable for mobile browsers.
+ * Solves the 100vh problem where mobile browser chrome takes up space.
+ */
+function setupDynamicViewportHeight(shadow: ShadowRoot): void {
+  const setVH = () => {
+    const vh = window.innerHeight * 0.01;
+    // Update the CSS custom property on the shadow host
+    const host = shadow.host as HTMLElement;
+    if (host) {
+      host.style.setProperty('--sl-vh', `${vh}px`);
+    }
+  };
+
+  // Set initially
+  setVH();
+
+  // Update on resize (with debouncing)
+  let resizeTimeout: ReturnType<typeof setTimeout>;
+  const handleResize = () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(setVH, 100);
+  };
+
+  window.addEventListener('resize', handleResize, { passive: true });
+
+  // Also listen to visualViewport for better iOS support
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleResize);
+  }
+}
 
 function mountWidget(config: WidgetConfig): void {
   // Prevent duplicate mounts
@@ -156,6 +194,9 @@ function mountWidget(config: WidgetConfig): void {
   styleEl.textContent = rawStyles;
   shadow.appendChild(styleEl);
 
+  // ── 3b. Setup dynamic viewport height for mobile ──
+  setupDynamicViewportHeight(shadow);
+
   // ── 4. Create React mount point ──
   const mountPoint = document.createElement('div');
   mountPoint.id = 'sl-widget-root';
@@ -188,8 +229,20 @@ async function autoMount(): Promise<void> {
   }
 
   const config = readConfig(script);
-  const hydratedConfig = await hydrateConfigFromServer(config);
-  mountWidget(hydratedConfig);
+  
+  // Check if server config hydration should be skipped (for preview mode)
+  const disableServerConfig = getDataAttr(script, 'disableServerConfig', 
+    getDataAttr(script, 'disable-server-config', 'false'));
+  const shouldSkipHydration = disableServerConfig === 'true' || disableServerConfig === '1';
+  
+  if (shouldSkipHydration) {
+    // Use local config directly without server override (preview mode)
+    mountWidget(config);
+  } else {
+    // Normal behavior: hydrate from server config
+    const hydratedConfig = await hydrateConfigFromServer(config);
+    mountWidget(hydratedConfig);
+  }
 }
 
 // Run immediately if DOM is ready, else defer until DOMContentLoaded

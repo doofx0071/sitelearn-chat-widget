@@ -18,6 +18,8 @@ export const createProject = mutation({
         welcomeMessage: `Hi! I'm the ${args.name} assistant. How can I help you today?`,
         primaryColor: "#3b82f6",
         position: "bottom-right",
+        headerFont: "modern",
+        avatarStyle: "bot",
       },
       learningConfig: {
         depth: "full",

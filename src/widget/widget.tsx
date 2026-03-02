@@ -5,6 +5,9 @@ import React, {
   useCallback,
   useId,
 } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import type { Message, WidgetConfig, Citation, FeedbackRating } from './types';
 import {
   streamMessage,
@@ -53,6 +56,22 @@ const IconWarning = () => (
 const IconMinimise = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" width="16" height="16">
     <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+
+const IconBotAvatar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <rect x="4" y="8" width="16" height="11" rx="3" />
+    <circle cx="9" cy="13.5" r="1" />
+    <circle cx="15" cy="13.5" r="1" />
+    <path d="M12 8V5" />
+    <circle cx="12" cy="4" r="1" />
+  </svg>
+);
+
+const IconChatAvatar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5A8.4 8.4 0 0 1 8.8 19L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5Z" />
   </svg>
 );
 
@@ -105,6 +124,13 @@ function derivePrimaryVars(hex: string): React.CSSProperties {
     '--sl-border':        `rgba(${r},${g},${b},0.15)`,
     '--sl-surface-3':     `rgba(${r},${g},${b},0.06)`,
   } as React.CSSProperties;
+}
+
+function resolveHeaderFont(fontStyle?: WidgetConfig["headerFont"]): string {
+  if (fontStyle === 'editorial') return "'Lora', Georgia, serif";
+  if (fontStyle === 'classic') return "Georgia, 'Times New Roman', serif";
+  if (fontStyle === 'minimal') return "system-ui, -apple-system, sans-serif";
+  return "'DM Sans', system-ui, sans-serif";
 }
 
 // ─── Sub-components ───────────────────────────
@@ -201,7 +227,35 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onFeedback }) =>
     data-message-id={message.id}
   >
     <div className={`sl-bubble${message.error ? ' sl-bubble--error' : ''}`}>
-      {message.content}
+      {message.role === 'assistant' || message.role === 'system' ? (
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeSanitize]}
+          skipHtml
+          components={{
+            p: ({ children }) => <p className="sl-md-p">{children}</p>,
+            ul: ({ children }) => <ul className="sl-md-ul">{children}</ul>,
+            ol: ({ children }) => <ol className="sl-md-ol">{children}</ol>,
+            li: ({ children }) => <li className="sl-md-li">{children}</li>,
+            strong: ({ children }) => <strong className="sl-md-strong">{children}</strong>,
+            code: ({ children }) => <code className="sl-md-code">{children}</code>,
+            a: ({ href, children }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sl-md-link"
+              >
+                {children}
+              </a>
+            ),
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
+      ) : (
+        message.content
+      )}
       {message.isStreaming && <span className="sl-cursor" aria-hidden="true" />}
     </div>
     {message.citations && message.citations.length > 0 && (
@@ -232,6 +286,8 @@ const Widget: React.FC<WidgetProps> = ({
   apiEndpoint,
   botName = 'SiteLearn AI',
   botAvatar,
+  headerFont = 'modern',
+  avatarStyle = 'bot',
   autoOpen = false,
   zIndex = 9999,
 }) => {
@@ -268,6 +324,25 @@ const Widget: React.FC<WidgetProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Handle iOS virtual keyboard - adjust scroll when input is focused
+  useEffect(() => {
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    if (!isMobile) return;
+
+    const handleVisualResize = () => {
+      // Small delay to let the keyboard animate
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    };
+
+    // Modern browsers support visualViewport
+    if (typeof window !== 'undefined' && 'visualViewport' in window) {
+      window.visualViewport?.addEventListener('resize', handleVisualResize);
+      return () => window.visualViewport?.removeEventListener('resize', handleVisualResize);
+    }
+  }, []);
+
   // Auto-grow textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const el = e.target;
@@ -277,9 +352,19 @@ const Widget: React.FC<WidgetProps> = ({
   };
 
   // Apply dynamic primary color via CSS custom properties derived from the hex
-  const cssVars: React.CSSProperties = {
+  const cssVars: React.CSSProperties & Record<string, string | number> = {
     ...(primaryColor ? derivePrimaryVars(primaryColor) : {}),
+    '--sl-font-display': resolveHeaderFont(headerFont),
     zIndex,
+  };
+
+  const initialLetter = botName?.trim()?.charAt(0)?.toUpperCase() || 'B';
+
+  const renderAvatarFallback = () => {
+    if (avatarStyle === 'sparkle') return '✦';
+    if (avatarStyle === 'chat') return <IconChatAvatar />;
+    if (avatarStyle === 'initial') return initialLetter;
+    return <IconBotAvatar />;
   };
 
   // ── Send logic ────────────────────────────
@@ -450,7 +535,7 @@ const Widget: React.FC<WidgetProps> = ({
             {botAvatar ? (
               <img src={botAvatar} alt="" width={40} height={40} />
             ) : (
-              '✦'
+              renderAvatarFallback()
             )}
           </div>
           <div className="sl-header__info">

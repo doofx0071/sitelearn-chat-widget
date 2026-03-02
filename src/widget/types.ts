@@ -50,6 +50,10 @@ export interface WidgetConfig {
   botName?: string;
   /** Optional avatar URL for the bot */
   botAvatar?: string;
+  /** Header font style */
+  headerFont?: 'editorial' | 'modern' | 'classic' | 'minimal';
+  /** Avatar style when no botAvatar URL is provided */
+  avatarStyle?: 'sparkle' | 'bot' | 'chat' | 'initial';
   /** When true the widget opens on page load */
   autoOpen?: boolean;
   /** Z-index for the widget container */

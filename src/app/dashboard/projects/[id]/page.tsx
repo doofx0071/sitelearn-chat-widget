@@ -690,6 +690,8 @@ export default function ProjectDetailPage({
                   welcomeMessage: project.botConfig.welcomeMessage,
                   primaryColor: project.botConfig.primaryColor,
                   position: project.botConfig.position,
+                  headerFont: project.botConfig.headerFont ?? "modern",
+                  avatarStyle: project.botConfig.avatarStyle ?? "bot",
                 }}
                 learningConfig={
                   project.learningConfig ?? {

@@ -36,6 +36,8 @@
   --sl-transition:     0.22s cubic-bezier(0.4, 0, 0.2, 1);
   --sl-window-w:       420px;
   --sl-window-h:       680px;
+  /* Dynamic viewport height - falls back to 100vh */
+  --sl-vh:             1vh;
 }
 
 /* ── Reset ──────────────────────────────────── */
@@ -60,8 +62,8 @@
 
 .sl-trigger {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
+  right: max(16px, calc(env(safe-area-inset-right) + 16px));
   z-index: 9998;
   display: flex;
   align-items: center;
@@ -99,7 +101,7 @@
 
 .sl-trigger.sl-trigger--left {
   right: auto;
-  left: 24px;
+  left: max(16px, calc(env(safe-area-inset-left) + 16px));
 }
 
 /* Status dot */
@@ -148,7 +150,7 @@
 .sl-window {
   position: fixed;
   bottom: 96px;
-  right: 24px;
+  right: max(16px, calc(env(safe-area-inset-right) + 16px));
   z-index: 9999;
   width: var(--sl-window-w);
   height: min(var(--sl-window-h), calc(100dvh - 100px));
@@ -172,7 +174,7 @@
 
 .sl-window--left {
   right: auto;
-  left: 24px;
+  left: max(16px, calc(env(safe-area-inset-left) + 16px));
   transform-origin: bottom left;
 }
 
@@ -343,6 +345,38 @@
   line-height: 1.55;
   word-break: break-word;
   position: relative;
+}
+
+.sl-md-p + .sl-md-p {
+  margin-top: 8px;
+}
+
+.sl-md-ul,
+.sl-md-ol {
+  margin-top: 8px;
+  margin-left: 18px;
+}
+
+.sl-md-li + .sl-md-li {
+  margin-top: 4px;
+}
+
+.sl-md-strong {
+  font-weight: 700;
+}
+
+.sl-md-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.sl-md-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .sl-msg--user .sl-bubble {
@@ -643,8 +677,200 @@
 
 /* ── Responsive ──────────────────────────────── */
 
-/* Mobile full-screen takeover */
-@media (max-width: 440px) {
+/* ═══════════════════════════════════════════════
+   BREAKPOINT STRATEGY
+   ──────────────────────────────────────────────
+   320-360px  → Very small phones (iPhone SE, etc.)
+   361-480px  → Standard phones (portrait)
+   481-768px  → Large phones / Small tablets
+   769-1024px → Tablets (portrait/landscape)
+   1025px+    → Desktop
+   ═══════════════════════════════════════════════ */
+
+/* ── Very small phones (320-360px) ────────────── */
+@media (max-width: 360px) {
+  :host {
+    --sl-window-w: 100%;
+  }
+
+  .sl-window {
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  .sl-trigger {
+    bottom: 12px;
+    right: 12px;
+    padding: 8px 12px;
+    font-size: 10.5px;
+    gap: 6px;
+  }
+
+  .sl-trigger.sl-trigger--left {
+    left: 12px;
+    right: auto;
+  }
+
+  .sl-trigger__dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .sl-trigger__badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+    top: -3px;
+    right: -3px;
+  }
+
+  .sl-header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .sl-header__avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+
+  .sl-header__name {
+    font-size: 13.5px;
+  }
+
+  .sl-header__status {
+    font-size: 10.5px;
+  }
+
+  .sl-header__btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sl-messages {
+    padding: 14px 12px 10px;
+    gap: 10px;
+  }
+
+  .sl-bubble {
+    padding: 9px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .sl-msg {
+    max-width: 92%;
+  }
+
+  .sl-msg__time {
+    font-size: 9.5px;
+  }
+
+  .sl-citation {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .sl-citation__icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sl-citation__title {
+    font-size: 11px;
+  }
+
+  .sl-citation__excerpt {
+    font-size: 10px;
+  }
+
+  .sl-feedback {
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .sl-feedback__label {
+    font-size: 10px;
+  }
+
+  .sl-feedback__btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .sl-inputbar {
+    padding: 10px 12px;
+    gap: 6px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .sl-textarea {
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .sl-send {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .sl-send svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sl-footer {
+    padding: 6px 12px 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .sl-powered {
+    font-size: 9.5px;
+  }
+
+  .sl-typing {
+    padding: 10px 12px;
+    gap: 4px;
+  }
+
+  .sl-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .sl-md-ul,
+  .sl-md-ol {
+    margin-left: 14px;
+  }
+
+  .sl-md-code {
+    font-size: 11px;
+    padding: 1px 3px;
+  }
+
+  .sl-error-banner {
+    margin: 0 12px;
+    padding: 6px 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+}
+
+/* ── Standard phones (361-480px) ──────────────── */
+@media (min-width: 361px) and (max-width: 480px) {
+  :host {
+    --sl-window-w: 100%;
+  }
+
   .sl-window {
     right: 0 !important;
     left: 0 !important;
@@ -665,15 +891,15 @@
 
   .sl-trigger.sl-trigger--left {
     left: 16px;
-  }
-
-  .sl-inputbar,
-  .sl-footer {
-    flex-shrink: 0 !important;
+    right: auto;
   }
 
   .sl-inputbar {
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .sl-header {
+    padding-top: calc(16px + env(safe-area-inset-top));
   }
 
   .sl-footer {
@@ -685,53 +911,464 @@
   }
 }
 
-/* Desktop: adapt to short viewports */
-@media (min-width: 441px) {
+/* ── Large phones / Small tablets (481-768px) ──── */
+@media (min-width: 481px) and (max-width: 768px) {
+  :host {
+    --sl-window-w: min(420px, calc(100vw - 32px));
+    --sl-window-h: min(680px, calc(100dvh - 100px));
+  }
+
   .sl-window {
+    right: 16px;
     max-height: min(var(--sl-window-h), calc(100dvh - 100px));
   }
 
-  /* Ensure input/footer never shrink on short heights */
+  .sl-window--left {
+    right: auto;
+    left: 16px;
+  }
+
+  .sl-trigger {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .sl-trigger.sl-trigger--left {
+    left: 16px;
+    right: auto;
+  }
+}
+
+/* ── Tablets (769-1024px) ──────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :host {
+    --sl-window-w: min(440px, calc(100vw - 48px));
+    --sl-window-h: min(720px, calc(100dvh - 120px));
+  }
+
+  .sl-window {
+    right: 24px;
+    max-height: min(var(--sl-window-h), calc(100dvh - 120px));
+  }
+
+  .sl-window--left {
+    right: auto;
+    left: 24px;
+  }
+
+  .sl-header {
+    padding: 18px 22px;
+  }
+
+  .sl-header__avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .sl-header__name {
+    font-size: 16px;
+  }
+
+  .sl-header__status {
+    font-size: 12px;
+  }
+
+  .sl-messages {
+    padding: 22px 18px 14px;
+    gap: 14px;
+  }
+
+  .sl-bubble {
+    padding: 12px 16px;
+    font-size: 14.5px;
+  }
+
+  .sl-inputbar {
+    padding: 14px 16px;
+  }
+
+  .sl-textarea {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
+  .sl-send {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sl-footer {
+    padding: 10px 16px 12px;
+  }
+
+  .sl-powered {
+    font-size: 11px;
+  }
+}
+
+/* ── Desktop (1025px+) ─────────────────────────── */
+@media (min-width: 1025px) {
+  :host {
+    --sl-window-w: 420px;
+    --sl-window-h: 680px;
+  }
+
+  .sl-window {
+    right: 24px;
+    max-height: min(var(--sl-window-h), calc(100dvh - 100px));
+  }
+
+  .sl-window--left {
+    right: auto;
+    left: 24px;
+  }
+}
+
+/* ── Landscape phones (short height) ───────────── */
+@media (max-height: 500px) and (max-width: 1024px) {
+  .sl-window {
+    height: calc(100dvh - 80px) !important;
+    max-height: calc(100dvh - 80px) !important;
+  }
+
+  .sl-header {
+    padding: calc(8px + env(safe-area-inset-top)) 14px 8px;
+    gap: 10px;
+  }
+
+  .sl-header__avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .sl-header__name {
+    font-size: 12.5px;
+  }
+
+  .sl-header__status {
+    font-size: 10px;
+  }
+
+  .sl-header__status::before {
+    width: 5px;
+    height: 5px;
+  }
+
+  .sl-header__btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .sl-messages {
+    min-height: 60px;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .sl-bubble {
+    padding: 8px 11px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .sl-msg {
+    max-width: 85%;
+  }
+
+  .sl-citations {
+    margin-top: 6px;
+    gap: 4px;
+  }
+
+  .sl-citation {
+    padding: 5px 7px;
+    gap: 5px;
+  }
+
+  .sl-citation__icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sl-citation__title {
+    font-size: 10.5px;
+  }
+
+  .sl-citation__excerpt {
+    font-size: 9.5px;
+    -webkit-line-clamp: 1;
+  }
+
+  .sl-feedback {
+    margin-top: 5px;
+    gap: 4px;
+  }
+
+  .sl-feedback__btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sl-typing {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .sl-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .sl-inputbar {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .sl-textarea {
+    font-size: 12.5px;
+    padding: 7px 10px;
+    max-height: 80px;
+  }
+
+  .sl-send {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sl-footer {
+    padding: 5px 12px 6px;
+  }
+
+  .sl-powered {
+    font-size: 9px;
+  }
+
+  .sl-error-banner {
+    margin: 0 10px;
+    padding: 5px 8px;
+    font-size: 10.5px;
+  }
+}
+
+/* ── Very short landscape (< 360px height) ─────── */
+@media (max-height: 360px) {
+  .sl-window {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    bottom: 0 !important;
+  }
+
+  .sl-header {
+    padding: 6px 12px;
+  }
+
+  .sl-header__avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .sl-header__name {
+    font-size: 11.5px;
+  }
+
+  .sl-header__status {
+    display: none;
+  }
+
+  .sl-header__btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sl-messages {
+    min-height: 40px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .sl-bubble {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .sl-msg__time {
+    display: none;
+  }
+
+  .sl-citations {
+    display: none;
+  }
+
+  .sl-feedback {
+    display: none;
+  }
+
+  .sl-inputbar {
+    padding: 6px 10px;
+  }
+
+  .sl-textarea {
+    padding: 6px 8px;
+    max-height: 60px;
+  }
+
+  .sl-send {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sl-footer {
+    display: none;
+  }
+}
+
+/* ── Touch device optimizations ────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase tap targets */
+  .sl-trigger {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .sl-header__btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .sl-feedback__btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .sl-send {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .sl-citation {
+    min-height: 44px;
+  }
+
+  /* Remove hover effects on touch */
+  .sl-trigger:hover {
+    transform: none;
+    box-shadow:
+      0 4px 16px rgba(91, 106, 240, 0.40),
+      0 1px 4px rgba(91, 106, 240, 0.20);
+  }
+
+  .sl-trigger:active {
+    transform: scale(0.98);
+    background: var(--sl-primary-dark);
+  }
+
+  .sl-send:hover:not(:disabled) {
+    transform: none;
+    background: var(--sl-primary);
+  }
+
+  .sl-send:active:not(:disabled) {
+    transform: scale(0.95);
+    background: var(--sl-primary-dark);
+  }
+
+  .sl-feedback__btn:hover {
+    background: var(--sl-surface-3);
+    border-color: transparent;
+    color: var(--sl-text-2);
+  }
+
+  .sl-feedback__btn:active {
+    background: var(--sl-primary-ghost);
+    border-color: var(--sl-border);
+    color: var(--sl-primary);
+  }
+
+  /* Improve scroll momentum */
+  .sl-messages {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Reduced motion preference ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .sl-trigger__badge {
+    animation: none;
+  }
+
+  .sl-dot {
+    animation: none;
+  }
+
+  .sl-cursor {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ── High contrast mode ────────────────────────── */
+@media (prefers-contrast: high) {
+  :host {
+    --sl-border: rgba(0, 0, 0, 0.4);
+  }
+
+  .sl-bubble {
+    border: 1px solid currentColor;
+  }
+
+  .sl-textarea:focus {
+    outline: 2px solid var(--sl-primary);
+    outline-offset: 2px;
+  }
+
+  .sl-feedback__btn--active-up {
+    outline: 2px solid #27a858;
+  }
+
+  .sl-feedback__btn--active-down {
+    outline: 2px solid #e02040;
+  }
+}
+
+/* ── iOS keyboard avoidance ────────────────────── */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  .sl-window {
+    /* Use fixed positioning with visual viewport */
+    position: fixed;
+  }
+
+  .sl-inputbar {
+    /* Prevent iOS zoom on input focus */
+    font-size: 16px;
+  }
+
+  .sl-textarea {
+    font-size: 16px;
+  }
+}
+
+/* ── Desktop: ensure input/footer never shrink ─── */
+@media (min-width: 361px) {
   .sl-inputbar,
   .sl-footer {
     flex-shrink: 0 !important;
     min-height: fit-content;
   }
 
-  /* Let messages area absorb remaining space */
   .sl-messages {
     min-height: 120px;
-  }
-}
-
-/* Very short viewports: prioritize input visibility */
-@media (max-height: 500px) and (min-width: 441px) {
-  .sl-window {
-    height: calc(100dvh - 96px) !important;
-    max-height: calc(100dvh - 96px) !important;
-  }
-
-  .sl-header {
-    padding: 10px 16px;
-  }
-
-  .sl-header__avatar {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-
-  .sl-header__name {
-    font-size: 13px;
-  }
-
-  .sl-messages {
-    min-height: 80px;
-    padding: 12px;
-  }
-
-  .sl-inputbar {
-    padding: 10px 12px;
   }
 }
 

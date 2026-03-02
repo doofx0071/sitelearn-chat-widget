@@ -297,6 +297,22 @@ export const updateSettings = mutation({
       welcomeMessage: v.string(),
       primaryColor: v.string(),
       position: v.union(v.literal("bottom-left"), v.literal("bottom-right")),
+      headerFont: v.optional(
+        v.union(
+          v.literal("editorial"),
+          v.literal("modern"),
+          v.literal("classic"),
+          v.literal("minimal")
+        )
+      ),
+      avatarStyle: v.optional(
+        v.union(
+          v.literal("sparkle"),
+          v.literal("bot"),
+          v.literal("chat"),
+          v.literal("initial")
+        )
+      ),
     }),
     learningConfig: v.object({
       depth: v.union(v.literal("single"), v.literal("nested"), v.literal("full")),
