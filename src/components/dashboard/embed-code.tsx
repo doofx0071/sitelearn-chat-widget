@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation } from "convex/react";
 import { Check, Copy, Eye, EyeOff, Globe2, Info } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type WidgetPosition = "bottom-right" | "bottom-left";
 type SnippetType = "html" | "next" | "react" | "vue";
@@ -63,6 +67,11 @@ const WIDGET_SCRIPT_URL = getWidgetScriptUrl();
 interface EmbedCodeProps {
   config?: Partial<EmbedConfig>;
   projectId?: string;
+  learningConfig?: {
+    depth: "single" | "nested" | "full";
+    schedule: "daily" | "weekly" | "monthly" | "manual";
+    excludedPaths: string[];
+  };
 }
 
 const COLOR_PRESETS = [
@@ -73,16 +82,14 @@ const COLOR_PRESETS = [
   { label: "Amber", value: "#d97706" },
 ];
 
-function toWidgetSide(position: WidgetPosition): "left" | "right" {
-  return position === "bottom-left" ? "left" : "right";
-}
-
-export function EmbedCode({ config: configOverride, projectId }: EmbedCodeProps) {
+export function EmbedCode({ config: configOverride, projectId, learningConfig }: EmbedCodeProps) {
+  const updateProjectSettings = useMutation(api.projects.updateSettings);
   const [config, setConfig] = useState<EmbedConfig>({
     ...DEFAULT_CONFIG,
-    ...(projectId ? { botId: projectId } : {}),
     ...configOverride,
+    ...(projectId ? { botId: projectId } : {}),
   });
+  const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState<SnippetType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -94,19 +101,26 @@ export function EmbedCode({ config: configOverride, projectId }: EmbedCodeProps)
     },
   ]);
 
+  const hydratedConfig = useMemo(
+    () => ({
+      ...DEFAULT_CONFIG,
+      ...configOverride,
+      ...(projectId ? { botId: projectId } : {}),
+    }),
+    [configOverride, projectId]
+  );
+
+  useEffect(() => {
+    setConfig(hydratedConfig);
+  }, [hydratedConfig]);
+
   const updateConfig = <K extends keyof EmbedConfig>(key: K, value: EmbedConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const widgetSide = toWidgetSide(config.position);
-
   const htmlScriptCode = `<script
   src="${WIDGET_SCRIPT_URL}"
   data-bot-id="${config.botId}"
-  data-bot-name="${config.botName}"
-  data-primary-color="${config.primaryColor}"
-  data-position="${widgetSide}"
-  data-welcome-message="${config.welcomeMessage}"
   defer
 ></script>`;
 
@@ -118,10 +132,6 @@ export function ChatWidget() {
       id="sitelearn-widget"
       src="${WIDGET_SCRIPT_URL}"
       data-bot-id="${config.botId}"
-      data-bot-name="${config.botName}"
-      data-primary-color="${config.primaryColor}"
-      data-position="${widgetSide}"
-      data-welcome-message="${config.welcomeMessage}"
       strategy="afterInteractive"
     />
   );
@@ -135,10 +145,6 @@ export function ChatWidget() {
     script.src = "${WIDGET_SCRIPT_URL}";
     script.defer = true;
     script.dataset.botId = "${config.botId}";
-    script.dataset.botName = "${config.botName}";
-    script.dataset.primaryColor = "${config.primaryColor}";
-    script.dataset.position = "${widgetSide}";
-    script.dataset.welcomeMessage = "${config.welcomeMessage}";
     document.body.appendChild(script);
 
     return () => {
@@ -159,10 +165,6 @@ onMounted(() => {
   scriptEl.src = "${WIDGET_SCRIPT_URL}";
   scriptEl.defer = true;
   scriptEl.dataset.botId = "${config.botId}";
-  scriptEl.dataset.botName = "${config.botName}";
-  scriptEl.dataset.primaryColor = "${config.primaryColor}";
-  scriptEl.dataset.position = "${widgetSide}";
-  scriptEl.dataset.welcomeMessage = "${config.welcomeMessage}";
   document.body.appendChild(scriptEl);
 });
 
@@ -197,6 +199,33 @@ onBeforeUnmount(() => {
       },
     ]);
     setPreviewInput("");
+  };
+
+  const handleSaveWidgetConfig = async () => {
+    if (!projectId) return;
+
+    setIsSaving(true);
+    try {
+      await updateProjectSettings({
+        projectId: projectId as Id<"projects">,
+        botConfig: {
+          name: config.botName,
+          welcomeMessage: config.welcomeMessage,
+          primaryColor: config.primaryColor,
+          position: config.position,
+        },
+        learningConfig: learningConfig ?? {
+          depth: "full",
+          schedule: "weekly",
+          excludedPaths: [],
+        },
+      });
+      toast.success("Widget config saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save widget config");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -255,15 +284,19 @@ onBeforeUnmount(() => {
             </TabsList>
 
             <TabsContent value="html">
+              <p className="mb-2 text-[11px] text-muted-foreground">Paste before the closing `&lt;/body&gt;` tag in your main HTML template.</p>
               <CodeBlock code={htmlScriptCode} language="html" copied={copied === "html"} onCopy={() => handleCopy("html")} />
             </TabsContent>
             <TabsContent value="next">
+              <p className="mb-2 text-[11px] text-muted-foreground">Add this component in `src/app/layout.tsx` (or your root layout).</p>
               <CodeBlock code={nextCode} language="tsx" copied={copied === "next"} onCopy={() => handleCopy("next")} />
             </TabsContent>
             <TabsContent value="react">
+              <p className="mb-2 text-[11px] text-muted-foreground">Mount once in your root file (for example `src/App.tsx`).</p>
               <CodeBlock code={reactCode} language="tsx" copied={copied === "react"} onCopy={() => handleCopy("react")} />
             </TabsContent>
             <TabsContent value="vue">
+              <p className="mb-2 text-[11px] text-muted-foreground">Use in your root component (`App.vue`) or main layout component.</p>
               <CodeBlock code={vueCode} language="vue" copied={copied === "vue"} onCopy={() => handleCopy("vue")} />
             </TabsContent>
           </Tabs>
@@ -278,10 +311,10 @@ onBeforeUnmount(() => {
             <div className="space-y-2 text-xs">
               {[
                 ["data-bot-id", "Project ID for routing chat requests (required)"],
-                ["data-bot-name", "Name shown in the widget header"],
-                ["data-primary-color", "Widget accent color as #RRGGBB"],
-                ["data-position", "left or right floating position"],
-                ["data-welcome-message", "First message shown on open"],
+                ["data-bot-name", "Optional override for bot name"],
+                ["data-primary-color", "Optional override for accent color"],
+                ["data-position", "Optional left/right floating position"],
+                ["data-welcome-message", "Optional override for first message"],
               ].map(([name, description]) => (
                 <div key={name} className="flex gap-2">
                   <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
@@ -359,6 +392,12 @@ onBeforeUnmount(() => {
                 <SelectItem value="bottom-left" className="text-xs">Bottom Left</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex justify-end">
+            <Button size="sm" className="h-8 text-xs" onClick={handleSaveWidgetConfig} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save widget config"}
+            </Button>
           </div>
         </TabsContent>
       </Tabs>

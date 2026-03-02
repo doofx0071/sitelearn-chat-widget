@@ -5,7 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
 import { useEffect, useRef, useState } from "react";
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Globe,
   RefreshCw,
@@ -53,6 +53,7 @@ export default function ProjectDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabValue>("overview");
   const [isRecrawling, setIsRecrawling] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -92,6 +93,20 @@ export default function ProjectDetailPage({
   const [learningDepth, setLearningDepth] = useState<LearningDepth>("full");
   const [learningSchedule, setLearningSchedule] = useState<LearningSchedule>("weekly");
   const [excludedPathsInput, setExcludedPathsInput] = useState("");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (
+      requestedTab === "overview" ||
+      requestedTab === "content" ||
+      requestedTab === "conversations" ||
+      requestedTab === "playground" ||
+      requestedTab === "settings" ||
+      requestedTab === "embed"
+    ) {
+      setTab(requestedTab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!project) return;
@@ -588,20 +603,6 @@ export default function ProjectDetailPage({
               <div className="grid gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm">Widget profile moved</CardTitle>
-                    <CardDescription className="text-xs">
-                      Bot name, welcome message, color, and position are now managed in the Embed tab to avoid duplicate controls.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setTab("embed")}>
-                      Open Embed settings
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
                     <div className="flex items-center gap-2">
                       <AlignLeft className="h-4 w-4 text-muted-foreground" />
                       <CardTitle className="text-sm">Learning settings</CardTitle>
@@ -682,7 +683,22 @@ export default function ProjectDetailPage({
 
             {/* Embed */}
             <TabsContent value="embed" className="mt-6">
-              <EmbedCode projectId={id} />
+              <EmbedCode
+                projectId={id}
+                config={{
+                  botName: project.botConfig.name,
+                  welcomeMessage: project.botConfig.welcomeMessage,
+                  primaryColor: project.botConfig.primaryColor,
+                  position: project.botConfig.position,
+                }}
+                learningConfig={
+                  project.learningConfig ?? {
+                    depth: "full",
+                    schedule: "weekly",
+                    excludedPaths: [],
+                  }
+                }
+              />
             </TabsContent>
           </Tabs>
         </div>

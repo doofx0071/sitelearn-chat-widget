@@ -610,28 +610,8 @@
   border-top: 1px solid var(--sl-border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
-}
-
-.sl-handoff-btn {
-  font-family: var(--sl-font-body);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--sl-primary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  transition: background var(--sl-transition);
-}
-
-.sl-handoff-btn:hover {
-  background: var(--sl-primary-ghost);
 }
 
 .sl-powered {

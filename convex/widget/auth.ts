@@ -16,6 +16,13 @@ export const validateBotKey = internalQuery({
   },
 });
 
+export const getProjectById = internalQuery({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.projectId);
+  },
+});
+
 export const checkRateLimit = internalMutation({
   args: {
     key: v.string(),

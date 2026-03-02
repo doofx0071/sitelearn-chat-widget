@@ -71,6 +71,51 @@ function readConfig(script: HTMLElement): WidgetConfig {
   };
 }
 
+interface RemoteBotConfig {
+  name?: string;
+  welcomeMessage?: string;
+  primaryColor?: string;
+  position?: 'bottom-left' | 'bottom-right';
+}
+
+async function hydrateConfigFromServer(config: WidgetConfig): Promise<WidgetConfig> {
+  if (!config.botId || !config.apiEndpoint) {
+    return config;
+  }
+
+  try {
+    const response = await fetch(
+      `${config.apiEndpoint}/widget-config?botId=${encodeURIComponent(config.botId)}`,
+      { method: 'GET' },
+    );
+
+    if (!response.ok) {
+      return config;
+    }
+
+    const payload = (await response.json()) as { botConfig?: RemoteBotConfig };
+    const botConfig = payload.botConfig;
+    if (!botConfig) {
+      return config;
+    }
+
+    return {
+      ...config,
+      botName: botConfig.name || config.botName,
+      welcomeMessage: botConfig.welcomeMessage || config.welcomeMessage,
+      primaryColor: botConfig.primaryColor || config.primaryColor,
+      position:
+        botConfig.position === 'bottom-left'
+          ? { ...config.position, side: 'left' }
+          : botConfig.position === 'bottom-right'
+            ? { ...config.position, side: 'right' }
+            : config.position,
+    };
+  } catch {
+    return config;
+  }
+}
+
 // ─── Mount logic ──────────────────────────────
 
 function mountWidget(config: WidgetConfig): void {
@@ -130,7 +175,7 @@ function mountWidget(config: WidgetConfig): void {
 
 // ─── Auto-detect and mount ────────────────────
 
-function autoMount(): void {
+async function autoMount(): Promise<void> {
   // Prefer document.currentScript (synchronous embed) then fall back to a
   // query selector (async / deferred embed).
   const script =
@@ -143,14 +188,17 @@ function autoMount(): void {
   }
 
   const config = readConfig(script);
-  mountWidget(config);
+  const hydratedConfig = await hydrateConfigFromServer(config);
+  mountWidget(hydratedConfig);
 }
 
 // Run immediately if DOM is ready, else defer until DOMContentLoaded
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', autoMount, { once: true });
+  document.addEventListener('DOMContentLoaded', () => {
+    void autoMount();
+  }, { once: true });
 } else {
-  autoMount();
+  void autoMount();
 }
 
 // ─── Programmatic API ─────────────────────────

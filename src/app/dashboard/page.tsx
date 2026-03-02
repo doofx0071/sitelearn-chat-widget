@@ -51,7 +51,7 @@ export default function DashboardPage() {
   };
 
   const handleEmbedCode = (id: string) => {
-    router.push(`/dashboard/projects/${id}/embed`);
+    router.push(`/dashboard/projects/${id}?tab=embed`);
   };
 
   const handleDelete = async (id: string) => {

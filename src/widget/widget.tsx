@@ -9,7 +9,6 @@ import type { Message, WidgetConfig, Citation, FeedbackRating } from './types';
 import {
   streamMessage,
   submitFeedback,
-  requestHandoff,
   ApiError,
 } from './api';
 
@@ -40,13 +39,6 @@ const IconDocument = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
-  </svg>
-);
-
-const IconHandoff = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
   </svg>
 );
 
@@ -409,33 +401,6 @@ const Widget: React.FC<WidgetProps> = ({
     [apiEndpoint, botId],
   );
 
-  // ── Handoff ───────────────────────────────
-
-  const handleHandoff = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const { message } = await requestHandoff(
-        apiEndpoint,
-        botId,
-        sessionId,
-        messages,
-      );
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          role: 'system',
-          content: message || "You've been connected to a human agent.",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    } catch {
-      setErrorBanner('Unable to connect to a human agent right now. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [apiEndpoint, botId, sessionId, messages]);
-
   // ── Toggle ────────────────────────────────
 
   const toggle = () => setIsOpen((v) => !v);
@@ -562,21 +527,11 @@ const Widget: React.FC<WidgetProps> = ({
 
         {/* Footer */}
         <footer className="sl-footer">
-          <button
-            className="sl-handoff-btn"
-            onClick={handleHandoff}
-            disabled={isLoading}
-            title="Talk to a human agent"
-          >
-            <IconHandoff />
-            Talk to a person
-          </button>
           <a
-            href="https://sitelearn.io"
+            href="https://sitelearn.doofs.tech"
             target="_blank"
             rel="noopener noreferrer"
             className="sl-powered"
-            tabIndex={-1}
           >
             by <span>SiteLearn</span>
           </a>
