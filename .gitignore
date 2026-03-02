@@ -20,6 +20,7 @@
 # production
 /build
 /dist
+/public/widget.iife.js
 
 # misc
 .DS_Store

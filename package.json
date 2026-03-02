@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "prebuild": "npm run widget:publish",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -11,7 +12,8 @@
     "test:ui": "vitest --ui",
     "tooling": "ncu",
     "convex:dev": "convex dev",
-    "widget:build": "vite build --config vite.config.widget.ts"
+    "widget:build": "vite build --config vite.config.widget.ts",
+    "widget:publish": "npm run widget:build && node scripts/publish-widget.mjs"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.10.11",
