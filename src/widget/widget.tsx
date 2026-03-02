@@ -15,19 +15,6 @@ import {
 
 // ─── SVG icon atoms ───────────────────────────
 
-const IconChat = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-);
-
-const IconClose = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" width="20" height="20">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
-
 const IconSend = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
     <line x1="22" y1="2" x2="11" y2="13"/>
@@ -459,7 +446,7 @@ const Widget: React.FC<WidgetProps> = ({
 
   return (
     <div style={cssVars}>
-      {/* ── Trigger bubble ── */}
+      {/* ── Trigger pill button ── */}
       <button
         className={`sl-trigger ${isLeft ? 'sl-trigger--left' : ''} ${
           isOpen ? 'sl-trigger--open' : ''
@@ -470,11 +457,9 @@ const Widget: React.FC<WidgetProps> = ({
         aria-controls="sl-chat-window"
         style={{ bottom: position?.bottom ?? 24 }}
       >
-        <span className="sl-trigger__icon sl-trigger__icon--chat">
-          <IconChat />
-        </span>
-        <span className="sl-trigger__icon sl-trigger__icon--close">
-          <IconClose />
+        <span className="sl-trigger__dot" aria-hidden="true" />
+        <span className="sl-trigger__text">
+          {isOpen ? 'Close chat' : 'Open chat'}
         </span>
         {unreadCount > 0 && !isOpen && (
           <span className="sl-trigger__badge" aria-label={`${unreadCount} new messages`}>

@@ -92,7 +92,6 @@ function mountWidget(config: WidgetConfig): void {
     'width:0',
     'height:0',
     'overflow:visible',   // allow fixed children to paint outside
-    'pointer-events:none',
     // NOTE: do NOT use contain:layout/strict/paint here — those would create a
     // new containing block for position:fixed children inside the shadow root,
     // breaking the fixed-position trigger bubble and chat window.
@@ -172,4 +171,3 @@ declare global {
 if (typeof window !== 'undefined') {
   window.SiteLearnWidget = { mount: mountWidget };
 }
-
