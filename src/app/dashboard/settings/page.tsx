@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 
 import { api } from "../../../../convex/_generated/api";
-import { Header } from "@/components/dashboard/header";
+import { ContentLayout } from "@/components/admin-panel/content-layout";
 import {
   Card,
   CardContent,
@@ -30,11 +30,8 @@ export default function SettingsPage() {
   );
 
   return (
-    <>
-      <Header breadcrumbs={[{ label: "Settings" }]} />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <ContentLayout title="Settings">
+      <div className="mx-auto max-w-4xl space-y-6">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Settings</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -132,8 +129,7 @@ export default function SettingsPage() {
               <span className="font-medium text-foreground"> Dashboard</span>.
             </CardContent>
           </Card>
-        </div>
-      </main>
-    </>
+      </div>
+    </ContentLayout>
   );
 }

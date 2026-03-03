@@ -1,18 +1,17 @@
+import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { SignInForm } from "@/components/auth/sign-in-form";
-import Link from "next/link";
 
 export default function LoginPage() {
-    return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md space-y-4">
-                <SignInForm />
-                <p className="text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/signup" className="text-primary hover:underline">
-                        Sign up
-                    </Link>
-                </p>
-            </div>
-        </div>
-    );
+  return (
+    <AuthSplitLayout
+      variant="login"
+      title="Sign In"
+      subtitle="Continue to your SiteLearn dashboard"
+      footerQuestion="Don&apos;t have an account?"
+      footerLinkLabel="Sign up"
+      footerHref="/signup"
+    >
+      <SignInForm />
+    </AuthSplitLayout>
+  );
 }

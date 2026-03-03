@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Header } from "@/components/dashboard/header";
+import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { CrawlStatusCard, type CrawlJob } from "@/components/dashboard/crawl-status";
 import { ChatPlayground } from "@/components/dashboard/chat-playground";
 import { EmbedCode } from "@/components/dashboard/embed-code";
@@ -246,16 +246,8 @@ export default function ProjectDetailPage({
           };
 
   return (
-    <>
-      <Header
-        breadcrumbs={[
-          { label: "Projects", href: "/dashboard" },
-          { label: project.name },
-        ]}
-      />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-6 py-8">
+    <ContentLayout title={project.name}>
+      <div className="mx-auto max-w-6xl">
           {/* Project header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
@@ -703,9 +695,8 @@ export default function ProjectDetailPage({
               />
             </TabsContent>
           </Tabs>
-        </div>
-      </main>
-    </>
+      </div>
+    </ContentLayout>
   );
 }
 

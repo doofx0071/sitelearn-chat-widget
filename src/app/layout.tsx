@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/providers/convex-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fontSans = Geist_Mono({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fontSerif = Geist_Mono({
+  variable: "--font-serif",
+  subsets: ["latin"],
+});
+
+const fontMono = Geist_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -29,6 +35,20 @@ export const metadata: Metadata = {
       "Turn your website into an intelligent AI assistant in minutes.",
     type: "website",
   },
+  icons: {
+    icon: [
+      {
+        url: "/logo/lightmode-sitelearn.svg",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/logo/darkmode-sitelearn.svg",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    shortcut: "/logo/lightmode-sitelearn.svg",
+    apple: "/logo/lightmode-sitelearn.svg",
+  },
 };
 
 export default function RootLayout({
@@ -39,13 +59,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
       >
         <ConvexClientProvider>
-          <TooltipProvider delayDuration={300}>
-            {children}
-            <Toaster position="top-right" />
-          </TooltipProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <TooltipProvider delayDuration={300}>
+              {children}
+              <Toaster position="top-right" />
+            </TooltipProvider>
+          </ThemeProvider>
         </ConvexClientProvider>
       </body>
     </html>

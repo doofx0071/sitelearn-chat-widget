@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { MenuIcon, BrainCircuit } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 
+import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { Menu } from "@/components/admin-panel/menu";
 import {
@@ -27,8 +28,10 @@ export function SheetMenu() {
             asChild
           >
             <Link href="/dashboard" className="flex items-center gap-2">
-              <BrainCircuit className="w-6 h-6 mr-1 text-primary" />
-              <SheetTitle className="font-bold text-lg">SiteLearn</SheetTitle>
+              <SiteLogo className="h-7 w-7 shrink-0" />
+              <SheetTitle className="font-bold text-lg text-[#333333] dark:text-[#fef536]">
+                SiteLearn
+              </SheetTitle>
             </Link>
           </Button>
         </SheetHeader>

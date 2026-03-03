@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { MenuIcon, ShieldCheck } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 
+import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { AdminMenu } from "@/components/admin-panel/admin-menu";
 import {
@@ -29,7 +30,7 @@ export function AdminSheetMenu() {
             asChild
           >
             <Link href="/admin" className="flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 mr-1 text-primary" />
+              <SiteLogo className="h-7 w-7 shrink-0" />
               <SheetTitle className="font-bold text-lg">Super Admin</SheetTitle>
             </Link>
           </Button>

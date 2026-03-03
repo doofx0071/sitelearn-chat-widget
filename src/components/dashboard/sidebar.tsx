@@ -16,7 +16,6 @@ import {
   Building2,
   Plus,
   Check,
-  Globe,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { SiteLogo } from "@/components/site-logo";
 import { cn } from "@/lib/utils";
 
 const workspaces = [
@@ -75,11 +75,9 @@ export function Sidebar({ defaultCollapsed = false }: SidebarProps) {
 
       {/* Logo */}
       <div className={cn("flex h-14 items-center border-b border-border px-3", collapsed ? "justify-center" : "gap-2 px-4")}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
-          <Globe className="h-4 w-4 text-primary-foreground" />
-        </div>
+        <SiteLogo className="h-7 w-7 shrink-0" />
         {!collapsed && (
-          <span className="font-semibold tracking-tight text-foreground">
+          <span className="font-semibold tracking-tight text-[#333333] dark:text-[#fef536]">
             SiteLearn
           </span>
         )}

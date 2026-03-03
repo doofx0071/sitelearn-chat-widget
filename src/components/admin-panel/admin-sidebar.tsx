@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
+
 import { AdminMenu } from "@/components/admin-panel/admin-menu";
+import { SiteLogo } from "@/components/site-logo";
 import { SidebarToggle } from "@/components/admin-panel/sidebar-toggle";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
-import { ShieldCheck } from "lucide-react";
-import Link from "next/link";
 
 export function AdminSidebar() {
   const sidebar = useStore(useSidebar, (x) => x);
@@ -36,7 +37,7 @@ export function AdminSidebar() {
           asChild
         >
           <Link href="/admin" className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 mr-1 text-primary" />
+            <SiteLogo className="h-7 w-7 shrink-0" />
             <h1
               className={cn(
                 "font-bold text-lg whitespace-nowrap transition-[transform,opacity,display] ease-in-out duration-300",

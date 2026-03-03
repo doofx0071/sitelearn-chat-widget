@@ -1,68 +1,42 @@
 import Link from "next/link";
 import {
-  Globe,
-  Zap,
-  Bot,
-  Code2,
-  BarChart3,
-  Shield,
-  ChevronRight,
-  Check,
-  Sparkles,
   ArrowRight,
+  Bot,
+  Check,
+  Code2,
+  MessageSquare,
+  Search,
+  Shield,
+  Sparkles,
+  Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AuthRedirect } from "@/components/auth-redirect";
 
-const features = [
+import { SiteLogo } from "@/components/site-logo";
+import { LandingSessionCta } from "@/components/landing/landing-session-cta";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+const stackFeatures = [
   {
-    icon: Globe,
-    title: "Intelligent Crawling",
+    label: "Semantic Retrieval",
+    title: "It reads your site, then answers with citations.",
     description:
-      "SiteLearn automatically discovers and indexes every public page on your domain, keeping its knowledge current with scheduled re-crawls.",
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
+      "Every page is crawled, chunked, and indexed. Responses point to exact source URLs so your users can verify answers in one click.",
+    icon: Search,
   },
   {
-    icon: Bot,
-    title: "AI-Powered Answers",
+    label: "Injection Defense",
+    title: "Hardened widget API with domain controls.",
     description:
-      "Powered by the latest LLMs, your bot answers questions with citations drawn directly from your site — no hallucinations, full transparency.",
-    color: "text-violet-500",
-    bg: "bg-violet-500/10",
-  },
-  {
-    icon: Code2,
-    title: "One-Line Embed",
-    description:
-      "Drop a single script tag into your HTML or install the React component. Your AI widget is live in under two minutes.",
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10",
-  },
-  {
-    icon: Zap,
-    title: "Real-Time Sync",
-    description:
-      "When you publish new content, SiteLearn detects changes and updates its knowledge base automatically — no manual retraining required.",
-    color: "text-amber-500",
-    bg: "bg-amber-500/10",
-  },
-  {
-    icon: BarChart3,
-    title: "Conversation Analytics",
-    description:
-      "Understand what your users are asking. Spot content gaps, track resolution rates, and improve your docs based on real questions.",
-    color: "text-rose-500",
-    bg: "bg-rose-500/10",
-  },
-  {
+      "Origin validation, rate limits, and strict request guards keep your bot reliable while still embedding in minutes.",
     icon: Shield,
-    title: "Domain Verification",
+  },
+  {
+    label: "Drop-In Widget",
+    title: "One script tag to go live.",
     description:
-      "Only you can create a bot for your domain. We verify ownership via DNS or HTML meta tags before crawling begins.",
-    color: "text-slate-500",
-    bg: "bg-slate-500/10",
+      "Paste the script snippet, choose colors, and deploy. SiteLearn handles crawling, updates, and answer generation behind the scenes.",
+    icon: Code2,
   },
 ];
 
@@ -70,385 +44,306 @@ const plans = [
   {
     name: "Free",
     price: "$0",
-    period: "forever",
-    description: "Perfect for personal projects and side experiments.",
-    features: [
-      "1 project",
-      "Up to 100 pages indexed",
-      "500 AI responses / month",
-      "SiteLearn branding",
-      "Community support",
-    ],
-    cta: "Get started free",
+    period: "/mo",
+    blurb: "For fast tests and small websites.",
     href: "/signup",
-    highlighted: false,
+    cta: "Start free",
+    points: [
+      "1 domain",
+      "Up to 100 pages indexed",
+      "500 AI responses/month",
+      "SiteLearn branding",
+    ],
   },
   {
     name: "Pro",
     price: "$29",
-    period: "per month",
-    description: "For teams shipping production-grade support experiences.",
-    features: [
-      "Unlimited projects",
-      "Up to 10,000 pages indexed",
-      "20,000 AI responses / month",
-      "Remove branding",
-      "Custom domain",
-      "Analytics dashboard",
-      "Priority support",
-    ],
-    cta: "Start free trial",
+    period: "/mo",
+    blurb: "For production support and growth teams.",
     href: "/signup?plan=pro",
-    highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "Dedicated infrastructure, SLAs, and white-glove onboarding.",
-    features: [
-      "Unlimited pages & responses",
-      "Dedicated crawl workers",
-      "SSO / SAML",
-      "Custom LLM integration",
-      "99.9% uptime SLA",
-      "Dedicated Slack channel",
+    cta: "Start 14-day trial",
+    points: [
+      "Unlimited domains",
+      "Up to 10,000 pages indexed",
+      "20,000 AI responses/month",
+      "Branding removal + analytics",
     ],
-    cta: "Contact sales",
-    href: "mailto:sales@sitelearn.ai",
-    highlighted: false,
+    featured: true,
   },
 ];
 
 export default function HomePage() {
   return (
-    <>
-      <AuthRedirect />
-      <div className="flex min-h-screen flex-col bg-background">
-        {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-              <Globe className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold tracking-tight">SiteLearn</span>
+            <SiteLogo className="h-7 w-7" />
+            <span className="font-semibold tracking-tight text-[#333333] dark:text-[#fef536]">
+              SiteLearn
+            </span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#features" className="transition-colors hover:text-foreground">
-              Features
+
+          <nav className="hidden items-center gap-6 text-xs uppercase tracking-widest text-muted-foreground md:flex">
+            <a href="#stack" className="transition-colors hover:text-foreground">
+              Stack
+            </a>
+            <a href="#demo" className="transition-colors hover:text-foreground">
+              Demo
             </a>
             <a href="#pricing" className="transition-colors hover:text-foreground">
               Pricing
             </a>
-            <a href="/docs" className="transition-colors hover:text-foreground">
-              Docs
-            </a>
           </nav>
+
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button size="sm" asChild>
-              <Link href="/signup">
-                Get started
-                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Link>
-            </Button>
+            <LandingSessionCta kind="nav" />
           </div>
         </div>
       </header>
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden pb-24 pt-20">
-          {/* Subtle gradient blobs */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -top-40 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl" />
-            <div className="absolute right-0 top-20 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl" />
+      <main>
+        <section className="relative overflow-hidden border-b border-border">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute right-0 top-8 h-[520px] w-[520px] rounded-full bg-primary/15 blur-[120px]" />
           </div>
 
-          <div className="relative mx-auto max-w-4xl px-4 text-center">
-            <Badge
-              variant="secondary"
-              className="mb-6 inline-flex items-center gap-1.5 text-xs"
-            >
-              <Sparkles className="h-3 w-3 text-amber-500" />
-              Now in public beta — free to try
-            </Badge>
+          <div className="relative mx-auto grid min-h-[78vh] max-w-7xl gap-14 px-4 py-20 lg:grid-cols-2 lg:items-center">
+            <div className="space-y-8">
+              <Badge variant="secondary" className="w-fit gap-1.5 font-mono text-[10px] uppercase tracking-widest">
+                <Sparkles className="h-3 w-3" />
+                Public Beta - Free Tier Available
+              </Badge>
 
-            <h1 className="text-balance text-5xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl md:text-7xl">
-              Turn your website into
-              <br />
-              <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                an AI assistant
-              </span>
-            </h1>
+              <div className="space-y-4">
+                <h1 className="text-5xl font-bold leading-[0.95] tracking-tighter sm:text-6xl lg:text-7xl">
+                  Your website,
+                  <br />
+                  speaking.
+                  <br />
+                  <span className="bg-gradient-to-r from-[#2f2f2f] to-[#f0e422] bg-clip-text text-transparent dark:bg-gradient-to-r dark:from-[#fef536] dark:to-[#fffce0]">
+                    Instantly.
+                  </span>
+                </h1>
+                <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                  SiteLearn turns any domain into a citation-backed AI chatbot widget.
+                  Crawl pages, answer questions, and ship support that feels instant.
+                </p>
+              </div>
 
-            <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground md:text-xl">
-              SiteLearn crawls your entire site, builds a knowledge base, and
-              deploys a beautiful chat widget — trained on your content, ready
-              in minutes.
-            </p>
+              <LandingSessionCta kind="hero" />
 
-            <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button size="lg" className="h-12 gap-2 px-8 text-base" asChild>
-                <Link href="/signup">
-                  Start for free
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+              <p className="font-mono text-xs text-muted-foreground">
+                No credit card - 500 free responses/month - deploy in 2 minutes
+              </p>
             </div>
 
-            <p className="mt-4 text-xs text-muted-foreground">
-              No credit card required · Free tier available
-            </p>
-
-            {/* Hero mockup */}
-            <div className="mt-16 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-              <div className="flex h-8 items-center gap-1.5 border-b border-border bg-muted/50 px-4">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                <div className="ml-4 h-4 flex-1 rounded-full bg-muted" />
-              </div>
-              <div className="grid grid-cols-5 divide-x divide-border">
-                {/* Sidebar mock */}
-                <div className="col-span-1 space-y-2 p-4">
-                  {[...Array(4)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-7 rounded-md ${i === 0 ? "bg-accent" : "bg-transparent"}`}
-                    />
-                  ))}
+            <div className="relative">
+              <div className="absolute -inset-3 bg-primary/10 blur-2xl" />
+              <div className="relative border-2 border-border bg-card p-4 shadow-2xl">
+                <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Bot className="h-4 w-4" />
+                    Widget Preview
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">Live</Badge>
                 </div>
-                {/* Content mock */}
-                <div className="col-span-4 p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="h-5 w-32 rounded bg-muted" />
-                    <div className="h-7 w-24 rounded-md bg-primary/20" />
+
+                <div className="space-y-3 rounded-md border border-border bg-background p-4">
+                  <div className="ml-auto max-w-[88%] rounded-md border border-border bg-muted/40 p-2 text-xs">
+                    Does your chatbot support API docs?
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="rounded-lg border border-border p-3 space-y-2">
-                        <div className="h-4 w-3/4 rounded bg-muted" />
-                        <div className="h-3 w-1/2 rounded bg-muted/60" />
-                        <div className="mt-3 h-2 w-full rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-emerald-500/50"
-                            style={{ width: `${60 + i * 15}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="max-w-[94%] rounded-md border border-primary/40 bg-primary/10 p-2 text-xs">
+                    Yes. SiteLearn indexed your /docs and /api pages. You can ask endpoint,
+                    auth, and rate-limit questions. <span className="font-semibold">[1]</span>
                   </div>
+                  <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Ask about setup, pricing, or integration
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px] leading-relaxed">
+                  &lt;script src=&quot;https://sitelearn.ai/widget.js&quot;
+                  <br />
+                  data-bot-id=&quot;your-bot-id&quot;&gt;&lt;/script&gt;
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Features */}
-        <section id="features" className="border-t border-border py-24">
-          <div className="mx-auto max-w-6xl px-4">
-            <div className="text-center">
-              <Badge variant="secondary" className="mb-4 text-xs">
-                Features
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Everything you need to ship
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-                SiteLearn handles the hard parts — crawling, embedding,
-                inference, and delivery — so you can focus on your product.
-              </p>
+        <section className="border-b border-border py-8">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-6 px-4 text-xs text-muted-foreground">
+            <span className="font-mono uppercase tracking-widest">Trusted workflow</span>
+            <span className="h-px flex-1 bg-border" />
+            <span className="font-mono">12,847 conversations handled this week</span>
+          </div>
+        </section>
+
+        <section id="stack" className="border-b border-border py-24">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="mb-12 flex items-center gap-4">
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                The Intelligence Stack
+              </span>
+              <span className="h-px flex-1 bg-border" />
             </div>
 
-            <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {features.map((feature) => {
+            <div className="grid gap-6 lg:grid-cols-5">
+              {stackFeatures.map((feature, idx) => {
                 const Icon = feature.icon;
+                const isMain = idx === 0;
                 return (
-                  <div
+                  <article
                     key={feature.title}
-                    className="group rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-md"
+                    className={`border border-border bg-card p-6 transition-colors hover:border-primary/60 ${
+                      isMain ? "lg:col-span-3" : "lg:col-span-2"
+                    }`}
                   >
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${feature.bg}`}
-                    >
-                      <Icon className={`h-5 w-5 ${feature.color}`} />
+                    <div className="mb-4 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[#333333] dark:text-[#f3f3f3]">
+                      <Icon className="h-3.5 w-3.5" />
+                      {feature.label}
                     </div>
-                    <h3 className="mt-4 text-sm font-semibold text-foreground">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                       {feature.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    </h2>
+                    <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
                       {feature.description}
                     </p>
-                  </div>
+                  </article>
                 );
               })}
             </div>
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="border-t border-border bg-muted/30 py-24">
-          <div className="mx-auto max-w-4xl px-4">
-            <div className="text-center">
-              <Badge variant="secondary" className="mb-4 text-xs">
-                How it works
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Live in three steps
-              </h2>
+        <section id="demo" className="border-b border-border bg-muted/20 py-24">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-2">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                See It Work
+              </p>
+              <h2 className="mt-4 text-4xl font-bold tracking-tight">One line. Zero config.</h2>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Add the widget script and SiteLearn handles ingestion, indexing, and response quality.
+                Update your docs, and answers stay synced.
+              </p>
+
+              <div className="mt-8 space-y-3 font-mono text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                  Crawl and index starts automatically
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                  Answers include source citation links
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                  Theme and behavior configurable per project
+                </div>
+              </div>
             </div>
 
-            <div className="mt-16 grid gap-8 md:grid-cols-3">
-              {[
-                {
-                  step: "01",
-                  title: "Add your domain",
-                  description:
-                    "Verify ownership of your domain via DNS or a meta tag. We'll start crawling immediately.",
-                },
-                {
-                  step: "02",
-                  title: "We index your content",
-                  description:
-                    "SiteLearn crawls every page, chunks the content, and builds a semantic search index.",
-                },
-                {
-                  step: "03",
-                  title: "Embed the widget",
-                  description:
-                    "Copy one script tag into your site. Your AI chat widget is live and answering questions.",
-                },
-              ].map((item) => (
-                <div key={item.step} className="relative flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-3xl font-bold text-muted-foreground/30">
-                      {item.step}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
+            <div className="border border-border bg-card p-4">
+              <div className="mb-3 border-b border-border pb-2 font-mono text-xs text-muted-foreground">
+                index.html
+              </div>
+              <pre className="overflow-x-auto bg-foreground p-4 text-xs text-background">
+{`<script
+  src="https://sitelearn.ai/widget.js"
+  data-bot-id="your-bot-id"
+  data-position="right"
+></script>`}
+              </pre>
             </div>
           </div>
         </section>
 
-        {/* Pricing */}
-        <section id="pricing" className="border-t border-border py-24">
+        <section id="pricing" className="border-b border-border py-24">
           <div className="mx-auto max-w-6xl px-4">
-            <div className="text-center">
-              <Badge variant="secondary" className="mb-4 text-xs">
-                Pricing
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Simple, transparent pricing
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                Start free. Upgrade when you need more.
-              </p>
+            <div className="mb-10 text-center">
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Pricing</p>
+              <h2 className="mt-4 text-4xl font-bold tracking-tight">Simple plans. Real usage.</h2>
             </div>
 
-            <div className="mt-16 grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2">
               {plans.map((plan) => (
-                <div
+                <article
                   key={plan.name}
-                  className={`relative flex flex-col rounded-2xl border p-8 ${
-                    plan.highlighted
-                      ? "border-primary bg-primary text-primary-foreground shadow-xl"
+                  className={`border p-6 ${
+                    plan.featured
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card"
                   }`}
                 >
-                  {plan.highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400 text-[10px] font-semibold">
-                        Most popular
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    {plan.featured ? (
+                      <Badge className="bg-background text-foreground hover:bg-background">Recommended</Badge>
+                    ) : null}
+                  </div>
+                  <p className={`mt-2 text-sm ${plan.featured ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
+                    {plan.blurb}
+                  </p>
 
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${plan.highlighted ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                    >
-                      {plan.name}
-                    </p>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold">{plan.price}</span>
-                      {plan.period && (
-                        <span
-                          className={`text-sm ${plan.highlighted ? "text-primary-foreground/60" : "text-muted-foreground"}`}
-                        >
-                          /{plan.period}
-                        </span>
-                      )}
-                    </div>
-                    <p
-                      className={`mt-3 text-sm leading-relaxed ${plan.highlighted ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                    >
-                      {plan.description}
-                    </p>
+                  <div className="mt-5 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className={`${plan.featured ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                      {plan.period}
+                    </span>
                   </div>
 
-                  <ul className="mt-8 flex-1 space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5">
-                        <Check
-                          className={`mt-0.5 h-4 w-4 shrink-0 ${plan.highlighted ? "text-primary-foreground/70" : "text-emerald-500"}`}
-                        />
-                        <span
-                          className={`text-sm ${plan.highlighted ? "text-primary-foreground/90" : "text-foreground"}`}
-                        >
-                          {feature}
-                        </span>
+                  <ul className="mt-6 space-y-2">
+                    {plan.points.map((point) => (
+                      <li key={point} className="flex items-start gap-2 text-sm">
+                        <Check className={`mt-0.5 h-4 w-4 ${plan.featured ? "text-primary-foreground" : "text-primary"}`} />
+                        <span>{point}</span>
                       </li>
                     ))}
                   </ul>
 
-                  <div className="mt-8">
-                    <Button
-                      asChild
-                      className={`w-full ${
-                        plan.highlighted
-                          ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                          : ""
-                      }`}
-                      variant={plan.highlighted ? "default" : "outline"}
-                    >
-                      <Link href={plan.href}>
-                        {plan.cta}
-                        <ChevronRight className="ml-1.5 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
+                  <Button
+                    className={`mt-6 w-full ${
+                      plan.featured
+                        ? "bg-background text-foreground hover:bg-background/90"
+                        : ""
+                    }`}
+                    variant={plan.featured ? "default" : "outline"}
+                    asChild
+                  >
+                    <Link href={plan.href}>
+                      {plan.cta}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        {/* CTA Banner */}
-        <section className="border-t border-border bg-muted/30 py-24">
-          <div className="mx-auto max-w-2xl px-4 text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Ready to get started?
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Join hundreds of teams already using SiteLearn to answer customer
-              questions automatically.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button size="lg" className="h-12 gap-2 px-8" asChild>
+        <section className="bg-foreground py-20 text-background">
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="space-y-2 font-mono text-sm">
+              <p>
+                <span className="text-primary">$</span> sitelearn init docs.yourcompany.com
+              </p>
+              <p className="text-primary">[ok] learning pages...</p>
+              <p className="text-primary">[ok] building semantic index...</p>
+              <p className="text-primary">[ok] chatbot widget deployed.</p>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Your AI support is live.</h2>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" size="lg" asChild>
                 <Link href="/signup">
-                  Create your free account
-                  <ArrowRight className="h-4 w-4" />
+                  Deploy now
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -456,67 +351,19 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-background py-12">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div className="col-span-1">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-                  <Globe className="h-4 w-4 text-primary-foreground" />
-                </div>
-                <span className="font-semibold tracking-tight">SiteLearn</span>
-              </Link>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                AI-powered chat widgets trained on your website content.
-              </p>
-            </div>
-
-            {[
-              {
-                heading: "Product",
-                links: ["Features", "Pricing", "Changelog", "Roadmap"],
-              },
-              {
-                heading: "Developers",
-                links: ["Documentation", "API Reference", "Widget SDK", "Status"],
-              },
-              {
-                heading: "Company",
-                links: ["About", "Blog", "Privacy", "Terms"],
-              },
-            ].map((col) => (
-              <div key={col.heading}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-foreground">
-                  {col.heading}
-                </p>
-                <ul className="mt-4 space-y-2.5">
-                  {col.links.map((link) => (
-                    <li key={link}>
-                      <a
-                        href="#"
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {link}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+      <footer className="border-t border-border py-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <SiteLogo className="h-7 w-7" />
+            <span className="font-semibold tracking-tight text-[#333333] dark:text-[#fef536]">
+              SiteLearn
+            </span>
           </div>
-
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
-            <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} SiteLearn. All rights reserved.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Built with ❤️ and Convex
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            AI chatbot widgets trained on your content with citation-backed answers.
+          </p>
         </div>
       </footer>
     </div>
-    </>
   );
 }

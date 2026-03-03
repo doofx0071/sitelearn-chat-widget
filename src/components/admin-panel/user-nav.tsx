@@ -39,7 +39,7 @@ export function UserNav() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="relative h-8 w-8 rounded-full"
+                className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-primary/30 dark:hover:border-primary/50 dark:hover:bg-primary/20 dark:hover:ring-primary/50"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="#" alt="Avatar" />
