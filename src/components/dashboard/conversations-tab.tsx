@@ -82,7 +82,6 @@ interface MessageWithFeedback {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: number;
-  sources?: Array<{ url: string; title?: string; snippet: string }>;
   feedback: {
     rating: "up" | "down";
     note?: string | null;
@@ -271,37 +270,6 @@ function MessageBubble({ message }: { message: MessageWithFeedback }) {
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
         </div>
-
-        {/* Sources */}
-        {!isUser && message.sources && message.sources.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {message.sources.map((source, i) => {
-              let hostname = source.url;
-              try {
-                hostname = new URL(source.url).hostname;
-              } catch {
-                // use raw url
-              }
-              return (
-                <a
-                  key={i}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={source.snippet}
-                  className="flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <span className="flex h-3 w-3 items-center justify-center rounded-full bg-muted text-[8px] font-bold border border-border">
-                    {i + 1}
-                  </span>
-                  <span className="max-w-[100px] truncate">
-                    {source.title ?? hostname}
-                  </span>
-                </a>
-              );
-            })}
-          </div>
-        )}
 
         {/* Feedback badge */}
         {!isUser && message.feedback && (

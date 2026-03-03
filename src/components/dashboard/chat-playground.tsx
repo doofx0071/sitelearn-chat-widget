@@ -9,7 +9,6 @@ import {
   Bot,
   User,
   Loader2,
-  ExternalLink,
   RotateCcw,
   Info,
 } from "lucide-react";
@@ -25,18 +24,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export interface Citation {
-  id: string;
-  title: string;
-  url: string;
-  snippet?: string;
-}
-
 export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  citations?: Citation[];
   timestamp: Date;
 }
 
@@ -96,12 +87,6 @@ export function ChatPlayground({
       id: m._id,
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content,
-      citations: (m.sources ?? []).map((s: any, i: number) => ({
-        id: `${m._id}-${i}`,
-        title: s.title || s.url,
-        url: s.url,
-        snippet: s.snippet,
-      })),
       timestamp: new Date(m.createdAt),
     }));
     setMessages(mapped);
@@ -330,28 +315,6 @@ function MessageBubble({ message }: { message: Message }) {
             />
           )}
         </div>
-
-        {/* Citations */}
-        {message.citations && message.citations.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {message.citations.map((citation, i) => (
-              <a
-                key={citation.id}
-                href={citation.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={citation.snippet}
-                className="flex items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground hover:bg-muted"
-              >
-                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-muted text-[8px] font-bold text-muted-foreground border border-border">
-                  {i + 1}
-                </span>
-                <span className="max-w-[120px] truncate">{citation.title}</span>
-                <ExternalLink className="h-2.5 w-2.5 shrink-0" />
-              </a>
-            ))}
-          </div>
-        )}
 
         <span className="text-[9px] text-muted-foreground">
           {message.timestamp.toLocaleTimeString("en-US", {

@@ -46,6 +46,8 @@ export interface WidgetConfig {
   welcomeMessage: string;
   /** Base URL for the SiteLearn chat API */
   apiEndpoint: string;
+  /** Optional public bot key used to bypass strict origin checks */
+  apiKey?: string;
   /** Optional label shown in the chat header */
   botName?: string;
   /** Optional avatar URL for the bot */

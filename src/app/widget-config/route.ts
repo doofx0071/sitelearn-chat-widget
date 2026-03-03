@@ -23,7 +23,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const origin = request.headers.get("origin");
+  const origin = request.headers.get("origin") ?? request.nextUrl.origin;
   const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
 
   if (!convexSiteUrl) {
@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const botId = request.nextUrl.searchParams.get("botId");
+  const apiKey = request.headers.get("x-api-key");
   if (!botId) {
     return NextResponse.json({ error: "botId is required" }, { status: 400, headers: corsHeaders(origin) });
   }
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
     method: "GET",
     headers: {
       ...(origin ? { Origin: origin } : {}),
+      ...(apiKey ? { "x-api-key": apiKey } : {}),
     },
   });
 

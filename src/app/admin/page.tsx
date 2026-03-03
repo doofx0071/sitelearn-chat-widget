@@ -114,9 +114,14 @@ export default function AdminOverviewPage() {
   const totalWorkspaces = stats?.totalWorkspaces ?? 0;
   const totalProjects = stats?.totalProjects ?? 0;
   const totalMessages = stats?.totalMessages ?? 0;
-  const totalChunks = stats?.totalChunks ?? 0;
+  const totalChunks = stats?.totalChunks; // Nullable (expensive scan)
   const totalCrawledPages = stats?.totalCrawledPages ?? 0;
   const totalConversations = stats?.totalConversations ?? 0;
+
+  // Format nullable totalChunks safely
+  const totalChunksDisplay = totalChunks != null && typeof totalChunks === "number" 
+    ? totalChunks.toLocaleString() 
+    : "—";
 
   const freePlans = stats?.planDistribution?.free ?? 0;
   const proPlans = stats?.planDistribution?.pro ?? 0;
@@ -202,7 +207,7 @@ export default function AdminOverviewPage() {
             <CardContent>
               <div className="space-y-3">
                 {[
-                  { label: "Vector Chunks", value: totalChunks.toLocaleString() },
+                  { label: "Vector Chunks", value: totalChunksDisplay },
                   { label: "Crawled Pages", value: totalCrawledPages.toLocaleString() },
                   { label: "Conversations", value: totalConversations.toLocaleString() },
                 ].map((row) => (

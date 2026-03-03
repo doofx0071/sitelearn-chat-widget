@@ -21,10 +21,11 @@ function now(): string {
   return new Date().toISOString();
 }
 
-function buildHeaders(extra?: Record<string, string>): Record<string, string> {
+function buildHeaders(extra?: Record<string, string>, apiKey?: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     'X-SiteLearn-Client': 'widget/1.0',
+    ...(apiKey ? { 'x-api-key': apiKey } : {}),
     ...extra,
   };
 }
@@ -72,10 +73,11 @@ export async function sendMessage(
   sessionId: string,
   message: string,
   pageUrl: string,
+  apiKey?: string,
 ): Promise<Message> {
   const res = await fetch(`${apiEndpoint}/chat`, {
     method: 'POST',
-    headers: buildHeaders(),
+    headers: buildHeaders(undefined, apiKey),
     body: JSON.stringify({ botId, sessionId, message, pageUrl }),
   }).then(handleResponse);
 
@@ -100,6 +102,7 @@ export async function streamMessage(
   pageUrl: string,
   onChunk: (chunk: StreamChunk) => void,
   onError: (err: ApiError) => void,
+  apiKey?: string,
   signal?: AbortSignal,
 ): Promise<Message> {
   let accumulatedContent = '';
@@ -109,7 +112,7 @@ export async function streamMessage(
   try {
     const res = await fetch(`${apiEndpoint}/chat/stream`, {
       method: 'POST',
-      headers: buildHeaders({ Accept: 'text/event-stream' }),
+      headers: buildHeaders({ Accept: 'text/event-stream' }, apiKey),
       body: JSON.stringify({ botId, sessionId, message, pageUrl }),
       signal,
     });

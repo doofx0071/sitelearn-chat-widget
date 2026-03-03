@@ -62,6 +62,7 @@ function readConfig(script: HTMLElement): WidgetConfig {
     botId:          getDataAttr(script, 'botId',          getDataAttr(script, 'bot-id',          'default')),
     primaryColor:   getDataAttr(script, 'primaryColor',   getDataAttr(script, 'primary-color',   '#5B6AF0')),
     apiEndpoint:    inferApiEndpoint(script),
+    apiKey:         getDataAttr(script, 'apiKey',         getDataAttr(script, 'api-key',         '')) || undefined,
     welcomeMessage: getDataAttr(script, 'welcomeMessage', getDataAttr(script, 'welcome-message', 'Hi there! How can I help you today?')),
     botName:        getDataAttr(script, 'botName',        getDataAttr(script, 'bot-name',        'SiteLearn AI')),
     botAvatar:      getDataAttr(script, 'botAvatar',      getDataAttr(script, 'bot-avatar',      '')),
@@ -90,7 +91,10 @@ async function hydrateConfigFromServer(config: WidgetConfig): Promise<WidgetConf
   try {
     const response = await fetch(
       `${config.apiEndpoint}/widget-config?botId=${encodeURIComponent(config.botId)}`,
-      { method: 'GET' },
+      {
+        method: 'GET',
+        headers: config.apiKey ? { 'x-api-key': config.apiKey } : undefined,
+      },
     );
 
     if (!response.ok) {

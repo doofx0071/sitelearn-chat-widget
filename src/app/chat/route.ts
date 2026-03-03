@@ -23,7 +23,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
+  const origin = request.headers.get("origin") ?? request.nextUrl.origin;
   const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
 
   if (!convexSiteUrl) {
@@ -34,12 +34,14 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.text();
+  const apiKey = request.headers.get("x-api-key");
   const response = await fetch(`${convexSiteUrl}/api/widget/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-SiteLearn-Client": request.headers.get("x-sitelearn-client") || "widget/1.0",
       ...(origin ? { Origin: origin } : {}),
+      ...(apiKey ? { "x-api-key": apiKey } : {}),
     },
     body,
   });

@@ -8,7 +8,7 @@ import React, {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import type { Message, WidgetConfig, Citation, FeedbackRating } from './types';
+import type { Message, WidgetConfig, FeedbackRating } from './types';
 import {
   streamMessage,
   submitFeedback,
@@ -134,32 +134,6 @@ function resolveHeaderFont(fontStyle?: WidgetConfig["headerFont"]): string {
 
 // ─── Sub-components ───────────────────────────
 
-interface CitationsProps {
-  items: Citation[];
-}
-
-const Citations: React.FC<CitationsProps> = ({ items }) => {
-  if (!items.length) return null;
-  return (
-    <div className="sl-citations" role="list" aria-label="Sources">
-      {items.map((c, index) => (
-        <a
-          key={c.id}
-          href={c.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="sl-citation"
-          role="listitem"
-          title={c.title}
-        >
-          <span className="sl-citation__num" aria-hidden="true">[{index + 1}]</span>
-          <span className="sl-citation__title">{c.title}</span>
-        </a>
-      ))}
-    </div>
-  );
-};
-
 interface FeedbackBarProps {
   messageId: string;
   currentFeedback?: FeedbackRating;
@@ -197,9 +171,9 @@ const FeedbackBar: React.FC<FeedbackBarProps> = ({
 );
 
 const TypingIndicator: React.FC = () => (
-  <div className="sl-msg sl-msg--assistant" role="status" aria-label="Assistant is thinking">
+  <div className="sl-msg sl-msg--assistant" role="status" aria-label="Assistant is typing">
     <div className="sl-typing">
-      <span className="sl-typing__label">Thinking</span>
+      <span className="sl-typing__label">Typing</span>
       <div className="sl-dot" />
       <div className="sl-dot" />
       <div className="sl-dot" />
@@ -212,9 +186,10 @@ const TypingIndicator: React.FC = () => (
 interface MessageBubbleProps {
   message: Message;
   onFeedback: (messageId: string, rating: FeedbackRating) => void;
+  streamPhase: 'idle' | 'thinking' | 'typing';
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onFeedback }) => (
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onFeedback, streamPhase }) => (
   <div
     className={`sl-msg sl-msg--${message.role}`}
     data-message-id={message.id}
@@ -250,19 +225,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onFeedback }) =>
         message.content
       )}
       {message.isStreaming && (
-        <span className="sl-thinking-inline" role="status" aria-label="Assistant is thinking">
-          <span className="sl-thinking-inline__text">Thinking</span>
-          <span className="sl-thinking-inline__dots" aria-hidden="true">
-            <span className="sl-dot sl-dot--sm" />
-            <span className="sl-dot sl-dot--sm" />
-            <span className="sl-dot sl-dot--sm" />
+        streamPhase === 'thinking' || !message.content.trim() ? (
+          <span className="sl-thinking-inline" role="status" aria-label="Assistant is thinking">
+            <span className="sl-thinking-inline__text">Thinking</span>
+            <span className="sl-ellipsis" aria-hidden="true" />
           </span>
-        </span>
+        ) : (
+          <span className="sl-typing-caret" aria-hidden="true" />
+        )
       )}
     </div>
-    {message.citations && message.citations.length > 0 && (
-      <Citations items={message.citations} />
-    )}
     {message.role === 'assistant' && !message.isStreaming && (
       <FeedbackBar
         messageId={message.id}
@@ -286,6 +258,7 @@ const Widget: React.FC<WidgetProps> = ({
   position,
   welcomeMessage,
   apiEndpoint,
+  apiKey,
   botName = 'SiteLearn AI',
   botAvatar,
   headerFont = 'modern',
@@ -297,6 +270,7 @@ const Widget: React.FC<WidgetProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamPhase, setStreamPhase] = useState<'idle' | 'thinking' | 'typing'>('idle');
   const [sessionId] = useState(() => uid());
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -399,6 +373,7 @@ const Widget: React.FC<WidgetProps> = ({
 
     setMessages((prev) => [...prev, userMsg, streamingMsg]);
     setIsLoading(true);
+    setStreamPhase('thinking');
 
     abortRef.current = new AbortController();
 
@@ -409,13 +384,15 @@ const Widget: React.FC<WidgetProps> = ({
       text,
       typeof window !== 'undefined' ? window.location.href : '',
       (chunk) => {
+        if (chunk.delta) {
+          setStreamPhase('typing');
+        }
         setMessages((prev) =>
           prev.map((m) =>
             m.id === streamingId
               ? {
                   ...m,
                   content: m.content + chunk.delta,
-                  citations: chunk.citations ?? m.citations,
                 }
               : m,
           ),
@@ -440,7 +417,9 @@ const Widget: React.FC<WidgetProps> = ({
               : m,
           ),
         );
+        setStreamPhase('idle');
       },
+      apiKey,
       abortRef.current.signal,
     );
 
@@ -451,9 +430,10 @@ const Widget: React.FC<WidgetProps> = ({
       ),
     );
     setIsLoading(false);
+    setStreamPhase('idle');
 
     if (!isOpen) setUnreadCount((n) => n + 1);
-  }, [inputValue, isLoading, apiEndpoint, botId, sessionId, isOpen]);
+  }, [inputValue, isLoading, apiEndpoint, apiKey, botId, sessionId, isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -542,7 +522,9 @@ const Widget: React.FC<WidgetProps> = ({
           </div>
           <div className="sl-header__info">
             <p id={labelId} className="sl-header__name">{botName}</p>
-            <p className="sl-header__status">{isLoading ? "Thinking..." : "Online"}</p>
+            <p className={`sl-header__status ${isLoading ? (streamPhase === 'thinking' ? 'sl-header__status--thinking' : 'sl-header__status--typing') : ''}`}>
+              {isLoading ? (streamPhase === 'thinking' ? <>Thinking<span className="sl-ellipsis" aria-hidden="true" /></> : 'Typing...') : 'Online'}
+            </p>
           </div>
           <div className="sl-header__actions">
             <button
@@ -576,6 +558,7 @@ const Widget: React.FC<WidgetProps> = ({
               key={msg.id}
               message={msg}
               onFeedback={handleFeedback}
+              streamPhase={streamPhase}
             />
           ))}
           {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
@@ -597,7 +580,7 @@ const Widget: React.FC<WidgetProps> = ({
             value={inputValue}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder={isLoading ? "Thinking..." : "Ask anything..."}
+            placeholder={isLoading ? (streamPhase === 'thinking' ? 'Thinking...' : 'Typing...') : 'Ask anything...'}
             disabled={isLoading}
             aria-disabled={isLoading}
           />

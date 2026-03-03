@@ -17,7 +17,6 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 
 type WidgetPosition = "bottom-right" | "bottom-left";
-type SnippetType = "html" | "next" | "react" | "vue";
 
 export interface EmbedConfig {
   botId: string;
@@ -106,7 +105,7 @@ export function EmbedCode({ config: configOverride, projectId, learningConfig }:
     ...(projectId ? { botId: projectId } : {}),
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [copied, setCopied] = useState<SnippetType | null>(null);
+  const [copied, setCopied] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
@@ -198,72 +197,12 @@ export function EmbedCode({ config: configOverride, projectId, learningConfig }:
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const htmlScriptCode = `<script
-  src="${WIDGET_SCRIPT_URL}"
-  data-bot-id="${config.botId}"
-  defer
-></script>`;
+  const htmlScriptCode = `<script src="${WIDGET_SCRIPT_URL}" data-bot-id="${config.botId}" defer></script>`;
 
-  const nextCode = `import Script from "next/script";
-
-export function ChatWidget() {
-  return (
-    <Script
-      id="sitelearn-widget"
-      src="${WIDGET_SCRIPT_URL}"
-      data-bot-id="${config.botId}"
-      strategy="afterInteractive"
-    />
-  );
-}`;
-
-  const reactCode = `import { useEffect } from "react";
-
-export function ChatWidget() {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "${WIDGET_SCRIPT_URL}";
-    script.defer = true;
-    script.dataset.botId = "${config.botId}";
-    document.body.appendChild(script);
-
-    return () => {
-      script.remove();
-    };
-  }, []);
-
-  return null;
-}`;
-
-  const vueCode = `<script setup lang="ts">
-import { onMounted, onBeforeUnmount } from "vue";
-
-let scriptEl: HTMLScriptElement | null = null;
-
-onMounted(() => {
-  scriptEl = document.createElement("script");
-  scriptEl.src = "${WIDGET_SCRIPT_URL}";
-  scriptEl.defer = true;
-  scriptEl.dataset.botId = "${config.botId}";
-  document.body.appendChild(scriptEl);
-});
-
-onBeforeUnmount(() => {
-  scriptEl?.remove();
-});
-</script>`;
-
-  const snippets: Record<SnippetType, string> = {
-    html: htmlScriptCode,
-    next: nextCode,
-    react: reactCode,
-    vue: vueCode,
-  };
-
-  const handleCopy = async (type: SnippetType) => {
-    await navigator.clipboard.writeText(snippets[type]);
-    setCopied(type);
-    setTimeout(() => setCopied(null), 2000);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(htmlScriptCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   /**
@@ -378,31 +317,8 @@ onBeforeUnmount(() => {
         </div>
 
         <TabsContent value="snippets" className="space-y-4">
-          <Tabs defaultValue="html" className="space-y-3">
-            <TabsList className="h-8">
-              <TabsTrigger value="html" className="text-xs">HTML</TabsTrigger>
-              <TabsTrigger value="next" className="text-xs">Next.js</TabsTrigger>
-              <TabsTrigger value="react" className="text-xs">React</TabsTrigger>
-              <TabsTrigger value="vue" className="text-xs">Vue</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="html">
-              <p className="mb-2 text-[11px] text-muted-foreground">Paste before the closing `&lt;/body&gt;` tag in your main HTML template.</p>
-              <CodeBlock code={htmlScriptCode} language="html" copied={copied === "html"} onCopy={() => handleCopy("html")} />
-            </TabsContent>
-            <TabsContent value="next">
-              <p className="mb-2 text-[11px] text-muted-foreground">Add this component in `src/app/layout.tsx` (or your root layout).</p>
-              <CodeBlock code={nextCode} language="tsx" copied={copied === "next"} onCopy={() => handleCopy("next")} />
-            </TabsContent>
-            <TabsContent value="react">
-              <p className="mb-2 text-[11px] text-muted-foreground">Mount once in your root file (for example `src/App.tsx`).</p>
-              <CodeBlock code={reactCode} language="tsx" copied={copied === "react"} onCopy={() => handleCopy("react")} />
-            </TabsContent>
-            <TabsContent value="vue">
-              <p className="mb-2 text-[11px] text-muted-foreground">Use in your root component (`App.vue`) or main layout component.</p>
-              <CodeBlock code={vueCode} language="vue" copied={copied === "vue"} onCopy={() => handleCopy("vue")} />
-            </TabsContent>
-          </Tabs>
+          <p className="text-[11px] text-muted-foreground">Copy this one-line script and paste it before `&lt;/body&gt;` in any site or app shell.</p>
+          <CodeBlock code={htmlScriptCode} language="html" copied={copied} onCopy={handleCopy} />
 
           <Separator />
 

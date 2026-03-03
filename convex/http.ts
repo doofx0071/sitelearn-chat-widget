@@ -58,6 +58,28 @@ function isAllowedOrigin(origin: string | null, domain: string): boolean {
   return hostname === targetDomain || hostname.endsWith(`.${targetDomain}`);
 }
 
+function allowLocalhostOriginBypass(): boolean {
+  return process.env.ALLOW_LOCALHOST_WIDGET_ORIGIN === "true";
+}
+
+function isAllowedOriginForWidget(origin: string | null, domain: string): boolean {
+  if (isAllowedOrigin(origin, domain)) {
+    return true;
+  }
+
+  if (!allowLocalhostOriginBypass()) {
+    return false;
+  }
+
+  const parsedOrigin = parseOrigin(origin);
+  if (!parsedOrigin) {
+    return false;
+  }
+
+  const host = parsedOrigin.hostname.toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
 function corsHeaders(allowedOrigin: string | null, methods: string): HeadersInit {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -188,7 +210,7 @@ http.route({
     }
 
     if (!apiKey) {
-      if (!isAllowedOrigin(origin, project.domain)) {
+      if (!isAllowedOriginForWidget(origin, project.domain)) {
         await logSecurityEventSafe(ctx, {
           projectId: project._id,
           eventType: "origin_violation",
@@ -260,39 +282,23 @@ http.route({
       conversationId: effectiveConversationId,
       role: "user",
       content: trimmedMessage,
+      triggerResponse: false,
     });
 
-    const startedAt = Date.now();
-    let assistantMessage:
-      | {
-          _id: Id<"messages">;
-          content: string;
-          createdAt: number;
-          sources?: Array<{ url: string; title?: string; snippet: string }>;
-        }
-      | null = null;
-
-    while (Date.now() - startedAt < 12000) {
-      const messages = await ctx.runQuery(internal.chat.rag.getConversationMessages, {
+    let assistantContent = "";
+    try {
+      assistantContent = await ctx.runAction(internal.chat.rag.generateChatResponse as any, {
+        projectId: project._id,
         conversationId: effectiveConversationId,
+        message: trimmedMessage,
       });
-
-      assistantMessage =
-        messages
-          .filter((entry) => entry.role === "assistant")
-          .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
-
-      if (assistantMessage?.content?.trim()) {
-        break;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
+    } catch (error) {
+      console.error("/api/widget/chat generation failed", error);
     }
 
     return jsonResponse(200, {
-      id: assistantMessage?._id,
-      content: assistantMessage?.content ?? "I am still learning. Please try again in a moment.",
-      citations: assistantMessage?.sources ?? [],
+      content: assistantContent?.trim() || "I don't have enough information about that in the learned content yet.",
+      citations: [],
       timestamp: new Date().toISOString(),
       conversationId: effectiveConversationId,
     }, allowedOrigin, "POST, OPTIONS");
@@ -304,6 +310,7 @@ http.route({
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     const origin = request.headers.get("Origin");
+    const apiKey = request.headers.get("x-api-key")?.trim();
     const url = new URL(request.url);
     const botId = url.searchParams.get("botId")?.trim();
 
@@ -336,7 +343,27 @@ http.route({
       });
     }
 
-    if (!isAllowedOrigin(origin, project.domain)) {
+    if (apiKey) {
+      const keyProject = await ctx.runQuery(internal.widget.auth.validateBotKey, { keyHash: apiKey });
+      if (!keyProject || keyProject._id !== project._id) {
+        await logSecurityEventSafe(ctx, {
+          projectId: project._id,
+          eventType: "invalid_credentials",
+          severity: "high",
+          endpoint: "/api/widget/config",
+          blocked: true,
+        });
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+    }
+
+    if (!apiKey && !isAllowedOriginForWidget(origin, project.domain)) {
       await logSecurityEventSafe(ctx, {
         projectId: project._id,
         eventType: "origin_violation",

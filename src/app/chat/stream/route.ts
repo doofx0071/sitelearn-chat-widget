@@ -1,5 +1,16 @@
 import { NextRequest } from "next/server";
 
+function splitIntoTypingChunks(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  return trimmed.match(/\S+\s*/g) ?? [trimmed];
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function corsHeaders(origin: string | null): HeadersInit {
   const headers: HeadersInit = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -23,7 +34,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
+  const origin = request.headers.get("origin") ?? request.nextUrl.origin;
   const baseUrl = request.nextUrl.origin;
 
   const body = await request.text();
@@ -52,21 +63,41 @@ export async function POST(request: NextRequest) {
 
   const result = (await response.json()) as {
     content?: string;
-    citations?: Array<{ url: string; title?: string; snippet: string }>;
   };
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      const frame = JSON.stringify({
-        delta: result.content || "",
-        citations: result.citations || [],
-        done: true,
-      });
+      const run = async () => {
+        const chunks = splitIntoTypingChunks(result.content || "");
 
-      controller.enqueue(encoder.encode(`data: ${frame}\n\n`));
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-      controller.close();
+        if (chunks.length === 0) {
+          const frame = JSON.stringify({ delta: "", done: true });
+          controller.enqueue(encoder.encode(`data: ${frame}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        await wait(420);
+
+        for (let i = 0; i < chunks.length; i += 1) {
+          const chunk = chunks[i];
+          const done = i === chunks.length - 1;
+          const frame = JSON.stringify({ delta: chunk, done });
+          controller.enqueue(encoder.encode(`data: ${frame}\n\n`));
+
+          if (!done) {
+            const pauseMs = /[.!?]\s*$/.test(chunk) ? 120 : /[,;:]\s*$/.test(chunk) ? 80 : 28;
+            await wait(pauseMs);
+          }
+        }
+
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      };
+
+      void run();
     },
   });
 

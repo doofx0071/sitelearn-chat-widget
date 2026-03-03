@@ -97,18 +97,25 @@ export const updateUserRole = mutation({
 
 /**
  * Returns total users, total workspaces, total projects, total messages.
+ * Note: Avoids heavy table scans (chunks, messages, crawledPages) to reduce bytes read.
  */
 export const getGlobalStats = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{
+    totalUsers: number;
+    totalWorkspaces: number;
+    totalProjects: number;
+    totalMessages: number;
+    totalChunks: number | null;
+    totalCrawledPages: number;
+    totalConversations: number;
+    planDistribution: { free: number; pro: number; enterprise: number };
+  }> => {
     await checkSuperAdmin(ctx);
 
     const members = await ctx.db.query("members").collect();
     const workspaces = await ctx.db.query("workspaces").collect();
     const projects = await ctx.db.query("projects").collect();
-    const messages = await ctx.db.query("messages").collect();
-    const chunks = await ctx.db.query("chunks").collect();
-    const crawledPages = await ctx.db.query("crawledPages").collect();
     const conversations = await ctx.db.query("conversations").collect();
 
     const planDistribution = workspaces.reduce(
@@ -119,13 +126,25 @@ export const getGlobalStats = query({
       { free: 0, pro: 0, enterprise: 0 }
     );
 
+    // Compute totalMessages from conversation.messageCount (avoids scanning messages table)
+    const totalMessages = conversations.reduce(
+      (sum, conv) => sum + conv.messageCount,
+      0
+    );
+
+    // Compute totalCrawledPages from project.pageCount (avoids scanning crawledPages table)
+    const totalCrawledPages = projects.reduce(
+      (sum, proj) => sum + (proj.pageCount ?? 0),
+      0
+    );
+
     return {
-      totalUsers: members.length, // Using members as a proxy for users if users table is not directly accessible
+      totalUsers: members.length,
       totalWorkspaces: workspaces.length,
       totalProjects: projects.length,
-      totalMessages: messages.length,
-      totalChunks: chunks.length,
-      totalCrawledPages: crawledPages.length,
+      totalMessages,
+      totalChunks: null, // Temporarily unavailable without expensive scan
+      totalCrawledPages,
       totalConversations: conversations.length,
       planDistribution,
     };
