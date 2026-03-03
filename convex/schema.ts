@@ -34,6 +34,7 @@ export default defineSchema({
     provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("custom")),
     model: v.string(),
     baseURL: v.optional(v.string()),
+    embeddingModel: v.optional(v.string()),
     apiKeyEncrypted: v.string(),
     updatedAt: v.number(),
     updatedBy: v.string(), // Better Auth user ID
@@ -170,7 +171,7 @@ export default defineSchema({
     .index("by_pageId", ["pageId"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
-      dimensions: 1536,
+      dimensions: 2048,
       filterFields: ["projectId"],
     }),
 

@@ -48,6 +48,8 @@ const PROVIDER_DEFAULTS: Record<Provider, { baseURL?: string; placeholder: strin
   },
 };
 
+const DEFAULT_EMBEDDING_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2:free";
+
 function FieldSkeleton({ wide = false }: { wide?: boolean }) {
   return (
     <div className={`animate-pulse h-8 rounded-md bg-muted ${wide ? "w-full" : "w-48"}`} />
@@ -61,6 +63,7 @@ export default function AdminAIPage() {
   const [provider, setProvider] = useState<Provider>("openrouter");
   const [model, setModel] = useState("");
   const [baseURL, setBaseURL] = useState("");
+  const [embeddingModel, setEmbeddingModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [initialised, setInitialised] = useState(false);
@@ -73,6 +76,7 @@ export default function AdminAIPage() {
         setProvider(currentConfig.provider as Provider);
         setModel(currentConfig.model);
         setBaseURL(currentConfig.baseURL ?? "");
+        setEmbeddingModel(currentConfig.embeddingModel ?? "");
         // Don't pre-fill the key input — user must explicitly enter a new one
       }
     }
@@ -101,6 +105,7 @@ export default function AdminAIPage() {
         provider,
         model: model.trim(),
         baseURL: baseURL.trim() || undefined,
+        embeddingModel: embeddingModel.trim() || undefined,
         apiKey: apiKey.trim() || undefined,
       });
       toast.success("AI configuration saved.");
@@ -146,10 +151,11 @@ export default function AdminAIPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-5">
                 {[
                   { label: "Provider", value: PROVIDER_LABELS[currentConfig.provider as Provider] ?? currentConfig.provider },
                   { label: "Model", value: currentConfig.model },
+                  { label: "Embedding Model", value: currentConfig.embeddingModel ?? "Default" },
                   { label: "Base URL", value: currentConfig.baseURL ?? "Default" },
                   { label: "API Key", value: currentConfig.apiKeyEncrypted },
                 ].map(({ label, value }) => (
@@ -198,9 +204,6 @@ export default function AdminAIPage() {
                   <SelectContent>
                     <SelectItem value="openrouter" className="text-xs">
                       OpenRouter
-                    </SelectItem>
-                    <SelectItem value="openai" className="text-xs">
-                      OpenAI
                     </SelectItem>
                     <SelectItem value="custom" className="text-xs">
                       Custom
@@ -264,6 +267,30 @@ export default function AdminAIPage() {
                 )}
               </div>
             )}
+
+            {/* Embedding Model */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ai-embedding-model" className="text-xs font-medium">
+                Embedding Model
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Optional. Default: <code className="font-mono">{DEFAULT_EMBEDDING_MODEL}</code>
+              </p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                ⚠️ Changing the embedding model requires re-learning all projects to maintain search consistency.
+              </p>
+              {isLoading ? (
+                <FieldSkeleton wide />
+              ) : (
+                <Input
+                  id="ai-embedding-model"
+                  value={embeddingModel}
+                  onChange={(e) => setEmbeddingModel(e.target.value)}
+                  placeholder={DEFAULT_EMBEDDING_MODEL}
+                  className="h-8 max-w-sm font-mono text-xs"
+                />
+              )}
+            </div>
 
             {/* API Key */}
             <div className="space-y-1.5">

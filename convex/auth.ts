@@ -30,8 +30,12 @@ function parseOriginsList(value: string | undefined): string[] {
 function buildTrustedOrigins(): string[] {
   const origins = new Set<string>();
 
-  // Primary site URL resolution
-  const siteUrl = process.env.SITE_URL || process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  // Primary site URL resolution (prefer explicit Better Auth URL)
+  const siteUrl =
+    process.env.BETTER_AUTH_URL ||
+    process.env.SITE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
   const normalizedSiteUrl = normalizeOrigin(siteUrl);
   origins.add(normalizedSiteUrl);
 
@@ -48,14 +52,19 @@ function buildTrustedOrigins(): string[] {
   return Array.from(origins);
 }
 
-const siteUrl = process.env.SITE_URL || process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const siteUrl =
+  process.env.BETTER_AUTH_URL ||
+  process.env.SITE_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "http://localhost:3000";
+const normalizedSiteUrl = normalizeOrigin(siteUrl);
 const trustedOrigins = buildTrustedOrigins();
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
-    baseURL: siteUrl,
+    baseURL: normalizedSiteUrl,
     trustedOrigins,
     database: authComponent.adapter(ctx),
     emailAndPassword: {

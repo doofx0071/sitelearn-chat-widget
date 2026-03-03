@@ -23,17 +23,17 @@ export async function generateEmbedding(text: string, config: ProviderConfig): P
 }
 
 export async function generateEmbeddings(texts: string[], config: ProviderConfig): Promise<number[][]> {
+  if (!config.model) {
+    throw new Error("Embedding model is required. Configure the embedding model in Admin AI settings.");
+  }
+
   const baseURL =
     config.baseURL ||
     (config.provider === 'openai'
       ? 'https://api.openai.com/v1'
       : 'https://openrouter.ai/api/v1');
 
-  const model =
-    config.model ||
-    (config.provider === 'openrouter'
-      ? 'openai/text-embedding-3-small'
-      : 'text-embedding-3-small');
+  const model = config.model;
   
   let retries = 0;
   const maxRetries = 3;

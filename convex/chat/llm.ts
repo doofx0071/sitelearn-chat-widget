@@ -21,31 +21,16 @@ export const generateEmbeddingAction = internalAction({
   handler: async (ctx, args): Promise<number[]> => {
     const config = await ctx.runQuery(internal.chat.llm.getGlobalAIConfig);
     if (!config) throw new Error("Global AI configuration not found");
-
-    const embeddingModelCandidates =
-      config.provider === "openrouter"
-        ? ["openai/text-embedding-3-small", "text-embedding-3-small"]
-        : config.provider === "openai"
-          ? ["text-embedding-3-small", "text-embedding-3-large"]
-          : [config.model, "text-embedding-3-small"].filter(Boolean) as string[];
-
-    let lastError: unknown = null;
-    for (const model of embeddingModelCandidates) {
-      try {
-        return await genEmbedding(args.text, {
-          provider: config.provider as "openrouter" | "openai" | "custom",
-          apiKey: config.apiKeyEncrypted,
-          baseURL: config.baseURL,
-          model,
-        });
-      } catch (error) {
-        lastError = error;
-      }
+    if (!config.embeddingModel?.trim()) {
+      throw new Error("Global embedding model is not configured. Set it in Admin -> AI.");
     }
 
-    throw lastError instanceof Error
-      ? lastError
-      : new Error("Failed to generate embedding with available models");
+    return await genEmbedding(args.text, {
+      provider: config.provider as "openrouter" | "openai" | "custom",
+      apiKey: config.apiKeyEncrypted,
+      baseURL: config.baseURL,
+      model: config.embeddingModel.trim(),
+    });
   },
 });
 
@@ -57,11 +42,12 @@ export const callLLM = internalAction({
   handler: async (ctx, args): Promise<string> => {
     const config = await ctx.runQuery(internal.chat.llm.getGlobalAIConfig);
     if (!config) throw new Error("Global AI configuration not found");
+    if (!config.model?.trim()) {
+      throw new Error("Global chat model is not configured. Set it in Admin -> AI.");
+    }
 
     const apiKey = config.apiKeyEncrypted;
-    const baseURL = config.baseURL || (config.provider === "openai" 
-      ? "https://api.openai.com/v1" 
-      : "https://openrouter.ai/api/v1");
+    const baseURL = config.baseURL || "https://openrouter.ai/api/v1";
 
     let retries = 0;
     const maxRetries = 3;
@@ -75,7 +61,7 @@ export const callLLM = internalAction({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: config.model,
+            model: config.model.trim(),
             messages: args.messages,
           }),
         });

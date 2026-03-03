@@ -42,6 +42,33 @@ async function checkSuperAdmin(ctx: QueryCtx) {
 }
 
 /**
+ * Returns whether the current user is a Super Admin.
+ * Safe for client-side route guards (does not throw).
+ */
+export const getIsSuperAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) {
+      return { isSuperAdmin: false };
+    }
+
+    const email = user.email;
+    const isAdminEmail = email.endsWith("@sitelearn.ai") || email === "admin@example.com";
+    if (isAdminEmail) {
+      return { isSuperAdmin: true };
+    }
+
+    const userRole = await ctx.db
+      .query("userRoles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+
+    return { isSuperAdmin: userRole?.role === "admin" };
+  },
+});
+
+/**
  * Updates a user's global role.
  */
 export const updateUserRole = mutation({
@@ -211,6 +238,7 @@ export const setAIConfig = mutation({
     provider: v.union(v.literal("openrouter"), v.literal("openai"), v.literal("custom")),
     model: v.string(),
     baseURL: v.optional(v.string()),
+    embeddingModel: v.optional(v.string()),
     apiKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -225,6 +253,7 @@ export const setAIConfig = mutation({
       provider: args.provider,
       model: args.model,
       baseURL: args.baseURL,
+      embeddingModel: args.embeddingModel,
       apiKeyEncrypted: args.apiKey ?? existing?.apiKeyEncrypted ?? "",
       updatedAt: Date.now(),
       updatedBy: user._id,
