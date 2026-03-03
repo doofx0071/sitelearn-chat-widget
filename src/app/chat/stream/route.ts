@@ -27,11 +27,14 @@ export async function POST(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
 
   const body = await request.text();
+  const apiKey = request.headers.get("x-api-key");
   const response = await fetch(`${baseUrl}/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-SiteLearn-Client": request.headers.get("x-sitelearn-client") || "widget/1.0",
+      ...(origin ? { Origin: origin } : {}),
+      ...(apiKey ? { "x-api-key": apiKey } : {}),
     },
     body,
   });
